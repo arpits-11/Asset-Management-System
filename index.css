@@ -299,7 +299,8 @@ body {
     top: 0;
     left: 0;
     height: 100vh;
-    z-index: 100;
+    z-index: 1000;
+    transition: transform 0.3s ease;
 }
 
 .sidebar-logo {
@@ -1232,6 +1233,16 @@ tr:hover td {
     text-align: right;
 }
 
+.mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .auth-left {
@@ -1248,12 +1259,19 @@ tr:hover td {
 }
 
 @media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+    .topbar {
+        padding: 14px 16px;
+    }
     .sidebar {
         transform: translateX(-100%);
     }
 
     .sidebar.open {
         transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
     }
 
     .main-content {
