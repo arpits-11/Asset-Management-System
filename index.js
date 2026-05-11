@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://asset-management-system-wgix.onrender.com';
 
 let currentUser = null;
 let allUsers = [];
