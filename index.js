@@ -199,7 +199,13 @@ function showPage(page) {
         activity: '📋 Activity Log',
         assets: '📦 All Assets',
         categories: '🗂️ Categories',
-        inventory: '🏭 Inventory'
+        inventory: '🏭 Inventory',
+        maintenance: '🔧 Maintenance',
+        alerts: '🔔 Alerts',
+        reports: '📈 Reports',
+        depreciation: '📉 Depreciation',
+        insurance: '🛡️ Insurance',
+        finance: '💰 Finance Dashboard'
     };
     document.getElementById('page-title').textContent = titles[page] || page;
 
