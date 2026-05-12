@@ -1192,7 +1192,7 @@ function editCurrentAsset() {
     if (!viewingAsset) return;
     const assetId = viewingAsset._id;
     closeDetailModal();
-    openEditAssetModal(viewingAsset._id);
+    openEditAssetModal(assetId);
 }
 
 // Assign modal
