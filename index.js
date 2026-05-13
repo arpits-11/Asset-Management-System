@@ -2753,10 +2753,10 @@ async function loadRequests() {
 
         tbody.innerHTML = reqs.map(r => `
             <tr>
-            <td>${r.username}</td>
+            <td>${r.userName}</td>
             <td style="font-weight:bold;">${r.itemRequested}</td>
             <td>${r.reason}</td>
-            <td><span class="badge ${r.status === 'approved' ? 'badge-active' : r.status === 'rejected' ? 'badge-lost' : 'badge-pending'}">${r.status}</td>
+            <td><span class="badge ${r.status === 'approved' ? 'badge-active' : r.status === 'rejected' ? 'badge-lost' : 'badge-pending'}">${r.status}</span></td>
             <td>${r.managerNotes || '-'}</td>
             <td>${new Date(r.createdAt).toLocaleDateString()}</td>
             <td>${currentUser.role !== 'employee' && r.status === 'pending' ? `
@@ -2769,17 +2769,57 @@ async function loadRequests() {
     } catch (err) { console.log(err); }
 }
 
-async function submitRequest() {
-    const itemRequested = document.getElementById('req-item').value;
-    const reason = document.getElementById('req-reason').value;
-    if (itemRequested) return alert('Please enter what you need.');
+// async function submitRequest() {
+//     const itemRequested = document.getElementById('req-item').value.trim();
+//     const reason = document.getElementById('req-reason').value.trim();
+//     if (itemRequested) return alert('Please enter what you need.');
 
-    await fetch(`${BASE_URL}/api/requests`, {
-        method: 'POST', headers: authHdrs(),
-        body: JSON.stringify({ iteamRequested, reason })
-    });
-    document.getElementById('request-modal').classList.remove('open');
-    loadRequests();
+//     await fetch(`${BASE_URL}/api/requests`, {
+//         method: 'POST', headers: authHdrs(),
+//         body: JSON.stringify({ iteamRequested, reason })
+//     });
+//     document.getElementById('request-modal').classList.remove('open');
+//     document.getElementById('req-item').value = '';
+//     document.getElementById('req-reason').value = '';
+//     loadRequests();
+// }
+async function submitRequest() {
+    // 1. Force JS to look ONLY inside the Request Modal
+    const modal = document.getElementById('request-modal');
+    
+    // 2. Grab the inputs directly from inside that specific modal
+    const itemInput = modal.querySelector('#req-item');
+    const reasonInput = modal.querySelector('#req-reason');
+
+    // 3. Debugging logs (Press F12 in your browser to see this!)
+    console.log("Checking Input Element:", itemInput);
+    console.log("The text JS found is:", itemInput.value);
+
+    // 4. Safely extract the text
+    const itemRequested = itemInput.value.trim();
+    const reason = reasonInput.value.trim();
+    
+    if(!itemRequested) {
+        alert('Please enter what you need.');
+        return; 
+    }
+    
+    try {
+        await fetch(`${BASE_URL}/api/requests`, {
+            method: 'POST', 
+            headers: authHdrs(),
+            body: JSON.stringify({ itemRequested, reason })
+        });
+        
+        // Success! Close modal and clear inputs
+        modal.classList.remove('open');
+        itemInput.value = ''; 
+        reasonInput.value = '';
+        
+        loadRequests();
+    } catch (err) {
+        console.error("Failed to send request:", err);
+    }
 }
 
 async function reviewRequest(id, status) {
