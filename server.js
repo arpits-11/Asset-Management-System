@@ -4,6 +4,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 dotenv.config();
 
@@ -225,6 +227,50 @@ const insuranceSchema = new mongoose.Schema({
 });
 const Insurance = mongoose.model('Insurance', insuranceSchema);
 
+const requestSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userName: String,
+    itemRequested: String,
+    reason: String,
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    managerNotes: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+const AssetRequest = mongoose.model('AssetRequest', requestSchema);
+
+const auditSchema = new mongoose.Schema({
+    title: String,
+    status: { type: String, enum: ['open', 'completed'], default: 'open' },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+});
+const Audit = mongoose.model('Audit', auditSchema);
+
+const auditItemSchema = new mongoose.Schema({
+    auditId: { type: mongoose.Schema.Types.ObjectId, ref: 'Audit' },
+    assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Asset' },
+    assetName: String,
+    assetCode: String,
+    status: { type: String, enum: ['pending', 'verified', 'missing', 'damaged'], default: 'pending' },
+    notes: String,
+    auditedAt: Date
+});
+const AuditItem = mongoose.model('AuditItem', auditItemSchema);
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+async function sendNotification(to, subject, text) {
+    if (!process.env.EMAIL_USER) return;
+    try {
+        await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
+    } catch (err) { console.log('Email Error:', err.message); }
+}
 
 function authMiddleware(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
@@ -744,16 +790,16 @@ app.put('/api/assets/:id/assign', authMiddleware, requireRole('admin', 'manager'
 
         const asset = await Asset.findByIdAndUpdate(
             req.params.id,
-            { assignedTo, assignedToName, location, assignedDate: new Date(), updatedAt: new Date() },
+            { assignedTo, assignedToName, location, assignedDate: new Date(), updatedAt: new Date(), status: assignedTo ? 'assigned' : 'active' },
             { returnDocument: 'after' }
         );
 
         await new AssetHistory({
             assetId: asset._id,
             assetName: asset.name,
-            action: 'assigned',
+            action: assignedTo ? 'assigned' : 'unassigned',
             fromUser: oldAsset.assignedToName || 'Unassigned',
-            toUser: assignedToName,
+            toUser: assignedToName || 'Unassigned',
             fromLocation: oldAsset.location || '',
             toLocation: location || '',
             notes: notes || '',
@@ -761,9 +807,18 @@ app.put('/api/assets/:id/assign', authMiddleware, requireRole('admin', 'manager'
         }).save();
 
         await logActivity(req.userId, user.name, 'asset_assigned',
-            `Assigned ${asset.name} to ${assignedToName}`);
+            `${assignedTo ? 'Assigned' : 'Unassigned'} ${asset.name} ${assignedTo ? 'to ' + assignedToName : ''}`);
 
-        res.json({ message: 'Asset assigned!', asset });
+        if (assignedTo) {
+            const assignedUser = await User.findById(assignedTo);
+            if (assignedUser && assignedUser.email) {
+                const subject = 'AssetMS: New Asset Assigned to You 📦';
+                const message = `Hello ${assignedUser.name},\n\nA new asset has been assigned to you by your manager.\n\nAsset Details:\n- Name: ${asset.name}\n- Asset Code: ${asset.assetId || 'N/A'}\n- Category: ${asset.categoryName || 'N/A'}\n\nPlease log in to the Asset Management System dashboard to view your current assets.\n\nThank you,\nAssetMS Admin Team`;
+
+                await sendNotification(assignedUser.email, subject, message);
+            }
+        }
+        res.json({ message: 'Asset assignment updated!', asset });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -1529,6 +1584,94 @@ app.get('/api/finance/stats', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+app.get('/api/requests', authMiddleware, async (req, res) => {
+    try {
+        const query = req.userRole === 'employee' ? { userId: req.userId } : {};
+        const requests = await AssetRequest.find(query).sort({ created: -1 });
+        res.json(requests);
+    }
+    catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.post('/api/requests', authMiddleware, async (req, res) => {
+    try {
+        const { itemRequested, reason } = req.body;
+        const user = await User.findById(req.userId);
+        const newReq = new AssetRequest({ userId: req.userId, userName: user.name, itemRequested, reason });
+        await newReq.save();
+        res.status(201).json({ message: 'Request submitted successfully!', request: newReq });
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.put('/api/requests/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { status, managerNotes } = req.body;
+        const request = await AssetRequest.findByIdAndUpdate(req.params.id, { status, managerNotes }, { new: true });
+
+        const emp = await User.findById(request.userId);
+        if (emp) sendNotification(emp.email, `Asset Request ${status.toUpperCase()}`, `Your request for ${request.itemRequested} was ${status}. Notes: ${managerNotes}`);
+
+        res.json({ message: `Request ${status}!`, request });
+    }
+    catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.get('/api/audits', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const audits = await Audit.find().sort({ createdAt: -1 });
+        res.json(audits);
+    }
+    catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.post('/api/audits', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const audit = new Audit({ title: req.body.title, createdBy: req.userId });
+        await audit.save();
+
+        const assets = await Asset.find({ status: { $ne: 'disposed' } });
+        const auditItems = assets.map(a => ({
+            auditId: audit._id, assetId: a._id, assetName: a.name, assetCode: a.assetId
+        }));
+        await AuditItem.insertMany(auditItems);
+        res.status(201).json({ message: 'Audit started!', audit });
+    }
+    catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.get('/api/audits/:id/items', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const items = await AuditItem.find({ auditId: req.params.id });
+        res.json(items);
+    }
+    catch (err) { res.status(500).json({ message: 'server error' }); }
+});
+
+app.put('/api/audits/items/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { status, notes } = req.body;
+        const item = await AuditItem.findByIdAndUpdate(req.params.id, { status, notes, auditedAt: new Date() }, { new: true });
+        res.json(item);
+    }
+    catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+if (!isTesting) {
+    cron.schedule('0 8 * * *', async () => {
+        console.log('Running daily notification checks...');
+        const today = new Date();
+        const next7Days = new Date(); next7Days.setDate(today.getDate() + 7);
+
+        const dueMaint = await Maintenance.find({ status: 'pending', scheduledDate: { $gte: today, $lte: next7Days } });
+        const admins = await User.find({ role: 'admin' });
+        const adminEmails = admins.map(a => a.email).join(',');
+
+        if (dueMaint.length > 0 && adminEmails) {
+            sendNotification(adminEmails, 'AssetMS: Upcoming Maintenance', `You have ${dueMaint.lehgth} maintenance task due in the next 7 days.`);
+        }
+    });
+}
 
 
 const PORT = process.env.PORT || 5000;
