@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asset Management System</title>
-    <link rel="stylesheet" href="index.css?v=2">
+    <link rel="stylesheet" href="index.css?v=3">
 </head>
 
 <body>
@@ -607,6 +607,12 @@
                     </button>
                     <button class="nav-item" id="nav-finance" onclick="showPage('finance')">
                         <span class="icon">💰</span> Finance Dashboard
+                    </button>
+                    <button class="nav-item" id="nav-requests" onclick="showPage('requests')">
+                        <span class="icon">🙋</span> My Requests
+                    </button>
+                    <button class="nav-item" id="nav-audits" onclick="showPage('audits')">
+                        <span class="icon">🔍</span> Asset Audits
                     </button>
 
                     <div class="nav-section-title" id="admin-nav-section">Administration</div>
@@ -1447,6 +1453,63 @@
                         </div>
                     </div>
 
+                    <div class="page" id="page-requests">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">🙋 Asset Requests</span>
+                                <button class="btn-btn-primary btn-sm"
+                                    onclick="document.getElementById('request-modal').classList.add('open')">
+                                    + New Request
+                                </button>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Requested By</th>
+                                        <th>Item</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Manager Notes</th>
+                                        <th>Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requests-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="page" id="page-audits">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">🔍 Asset Audits</span>
+                                <button class="btn-btn-primary btn-sm" onclick="startNewAudit()" id="start-audit-btn">
+                                    + Start New Audit
+                                </button>
+                            </div>
+                            <div id="audit-list"></div>
+                        </div>
+
+                        <div class="card" id="audit-scanner-card" style="display: none; margin-top: 20px;">
+                            <div class="card-header">
+                                <span class="card-title">📷 Verify Assets</span>
+                                <button class="btn btn-outline btn-sm"
+                                    onclick="document.getElementById('audit-scanner-card').style.display='none'">Close</button>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Asset ID</th>
+                                        <th>Name</th>
+                                        <th>Audit Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="audit-items-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -2064,7 +2127,27 @@
         </div>
     </div>
 
-    <script src="index.js?v=2"></script>
+    <div class="modal-overlay" id="request-modal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <span class="modal-title">New Asset Request</span>
+                <button class="modal-close" onclick="document.getElementById('request-modal').classList.remove('open')">✕</button>
+            </div>
+            <div class="form-group">
+                <label>What do you need?</label>
+                <input type="text" id="req-item" placeholder="e.g., Ergonomic Keyboard">
+            </div>
+            <div class="form-group">
+                <label>Reason / Justification</label>
+                <input type="text" id="req-reason" placeholder="Why do you need this?">
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button class="btn btn-primary" onclick="submitRequest()" style="width:100%;">Submit Request</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="index.js?v=3"></script>
 </body>
 
 </html>

@@ -73,6 +73,9 @@ function showApp() {
     if (currentUser.role === 'employee') {
         document.getElementById('nav-activity').style.display = 'none';
     }
+    if (currentUser.role === 'employee') {
+        document.getElementById('nav-audits').style.display = 'none';
+    }
 
     showPage('dashboard');
     loadDashboard();
@@ -214,6 +217,8 @@ function showPage(page) {
     if (page === 'approvals') loadPendingUsers();
     if (page === 'activity') loadActivity();
     if (page === 'inventory') loadInventory();
+    if (page === 'requests') { loadRequests(); }
+    if (page === 'audits') { loadAudits(); }
 }
 
 //Dashboard 
@@ -2739,6 +2744,105 @@ function renderFinanceBreakdown(data) {
 setInterval(() => {
     if (getToken()) loadInsuranceBadge();
 }, 300000);
+
+async function loadRequests() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/requests`, { headers: authHdrs() });
+        const reqs = await res.json();
+        const tbody = document.getElementById('requests-table-body');
+
+        tbody.innerHTML = reqs.map(r => `
+            <tr>
+            <td>${r.username}</td>
+            <td style="font-weight:bold;">${r.itemRequested}</td>
+            <td>${r.reason}</td>
+            <td><span class="badge ${r.status === 'approved' ? 'badge-active' : r.status === 'rejected' ? 'badge-lost' : 'badge-pending'}">${r.status}</td>
+            <td>${r.managerNotes || '-'}</td>
+            <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+            <td>${currentUser.role !== 'employee' && r.status === 'pending' ? `
+                    <button class="btn btn-success btn-sm" onclick="reviewRequest('${r._id}', 'approved')">👍</button>
+                    <button class="btn btn-danger btn-sm" onclick="reviewRequest('${r._id}', 'rejected')">👎</button>
+                    ` : '—'}
+            </td>
+            </tr>
+            `).join('');
+    } catch (err) { console.log(err); }
+}
+
+async function submitRequest() {
+    const itemRequested = document.getElementById('req-item').value;
+    const reason = document.getElementById('req-reason').value;
+    if (itemRequested) return alert('Please enter what you need.');
+
+    await fetch(`${BASE_URL}/api/requests`, {
+        method: 'POST', headers: authHdrs(),
+        body: JSON.stringify({ iteamRequested, reason })
+    });
+    document.getElementById('request-modal').classList.remove('open');
+    loadRequests();
+}
+
+async function reviewRequest(id, status) {
+    const notes = prompt(`Enter notes for this ${status} request (optional):`);
+    await fetch(`${BASE_URL}/api/requests/${id}`, {
+        method: 'PUT', headers: authHdrs(),
+        body: JSON.stringify({ status, managerNotes: notes || '' })
+    });
+    loadRequests();
+}
+
+async function loadAudits() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/audits`, { headers: authHdrs() });
+        const audits = await res.json();
+        document.getElementById('audit-list').innerHTML = audits.map(a => `
+            <div style="border: 1px solid var(--border); padding: 16px; margin-bottom: 10px; border-radius: 8px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${a.title}</strong>
+                    <span class="badge ${a.status === 'open' ? 'badge-pending' : 'badge-active'}">${a.status}</span>
+                </div>
+                <div style="font-size:12px; color:var(--text-secondary); margin-top:8px;">Started: ${new Date(a.createdAt).toLocaleDateString()}</div>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="openAuditScanner('${a._id}')">📷 Scan / Verify Assets</button>
+            </div>
+        `).join('');
+    }
+    catch (err) { console.log(err); }
+}
+
+async function startNewAudit() {
+    const title = prompt('Enter a name for this audit campaign (e.g., floor3 Office Audit):');
+    if (!title) return;
+    await fetch(`${BASE_URL}/api/audits`, { method: 'POST', headers: authHdrs(), body: JSON.stringify({ title }) });
+    loadAudits();
+}
+
+async function openAuditScanner(auditId) {
+    document.getElementById('audit-scanner-card').style.display = 'block';
+    const res = await fetch(`${BASE_URL}/api/audits/${auditId}/items`, {headers: authHdrs() });
+    const items = await res.json();
+
+    document.getElementById('audit-items-body').innerHTML = items.map(i => `
+        <tr>
+            <td style="color:var(--accent); font-family:monospace;">${i.assetCode}</td>
+            <td>${i.assetName}</td>
+            <td><span class="badge ${i.status === 'verified' ? 'badge-active' : i.status === 'pending' ? 'badge-pending' : 'badge-lost'}">${i.status}</span></td>
+            <td>
+                ${i.status === 'pending' ? `
+                <button class="btn btn-success btn-sm" onclick="verifyAuditItem('${i._id}', 'verified')">Found ✅</button>
+                <button class="btn btn-danger btn-sm" onclick="verifyAuditItem('${i._id}', 'missing')">Missing ❌</button>
+                ` : i.auditedAt ? new Date(i.auditedAt).toLocaleString() : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function verifyAuditItem(itemId, status) {
+    await fetch(`${BASE_URL}/api/audits/items/${itemId}`, {
+        method: 'PUT', headers: authHdrs(), body: JSON.stringify({ status })
+    });
+    document.getElementById('audit-scanner-card').style.display = 'none';
+    alert('Asset marked as ' + status);
+}
 
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
