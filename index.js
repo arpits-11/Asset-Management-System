@@ -2771,33 +2771,14 @@ async function loadRequests() {
     } catch (err) { console.log(err); }
 }
 
-// async function submitRequest() {
-//     const itemRequested = document.getElementById('req-item').value.trim();
-//     const reason = document.getElementById('req-reason').value.trim();
-//     if (itemRequested) return alert('Please enter what you need.');
-
-//     await fetch(`${BASE_URL}/api/requests`, {
-//         method: 'POST', headers: authHdrs(),
-//         body: JSON.stringify({ iteamRequested, reason })
-//     });
-//     document.getElementById('request-modal').classList.remove('open');
-//     document.getElementById('req-item').value = '';
-//     document.getElementById('req-reason').value = '';
-//     loadRequests();
-// }
 async function submitRequest() {
-    // 1. Force JS to look ONLY inside the Request Modal
     const modal = document.getElementById('request-modal');
-
-    // 2. Grab the inputs directly from inside that specific modal
     const itemInput = modal.querySelector('#req-item');
     const reasonInput = modal.querySelector('#req-reason');
 
-    // 3. Debugging logs (Press F12 in your browser to see this!)
-    console.log("Checking Input Element:", itemInput);
-    console.log("The text JS found is:", itemInput.value);
+    // console.log("Checking Input Element:", itemInput);
+    // console.log("The text JS found is:", itemInput.value);
 
-    // 4. Safely extract the text
     const itemRequested = itemInput.value.trim();
     const reason = reasonInput.value.trim();
 
@@ -2813,7 +2794,6 @@ async function submitRequest() {
             body: JSON.stringify({ itemRequested, reason })
         });
 
-        // Success! Close modal and clear inputs
         modal.classList.remove('open');
         itemInput.value = '';
         reasonInput.value = '';
