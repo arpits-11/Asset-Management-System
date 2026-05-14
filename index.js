@@ -208,7 +208,9 @@ function showPage(page) {
         reports: '📈 Reports',
         depreciation: '📉 Depreciation',
         insurance: '🛡️ Insurance',
-        finance: '💰 Finance Dashboard'
+        finance: '💰 Finance Dashboard',
+        requests: '🙋 My Requests',
+        audits: '🔍 Asset Audits'
     };
     document.getElementById('page-title').textContent = titles[page] || page;
 
@@ -2786,7 +2788,7 @@ async function loadRequests() {
 async function submitRequest() {
     // 1. Force JS to look ONLY inside the Request Modal
     const modal = document.getElementById('request-modal');
-    
+
     // 2. Grab the inputs directly from inside that specific modal
     const itemInput = modal.querySelector('#req-item');
     const reasonInput = modal.querySelector('#req-reason');
@@ -2798,24 +2800,24 @@ async function submitRequest() {
     // 4. Safely extract the text
     const itemRequested = itemInput.value.trim();
     const reason = reasonInput.value.trim();
-    
-    if(!itemRequested) {
+
+    if (!itemRequested) {
         alert('Please enter what you need.');
-        return; 
+        return;
     }
-    
+
     try {
         await fetch(`${BASE_URL}/api/requests`, {
-            method: 'POST', 
+            method: 'POST',
             headers: authHdrs(),
             body: JSON.stringify({ itemRequested, reason })
         });
-        
+
         // Success! Close modal and clear inputs
         modal.classList.remove('open');
-        itemInput.value = ''; 
+        itemInput.value = '';
         reasonInput.value = '';
-        
+
         loadRequests();
     } catch (err) {
         console.error("Failed to send request:", err);
@@ -2858,7 +2860,7 @@ async function startNewAudit() {
 
 async function openAuditScanner(auditId) {
     document.getElementById('audit-scanner-card').style.display = 'block';
-    const res = await fetch(`${BASE_URL}/api/audits/${auditId}/items`, {headers: authHdrs() });
+    const res = await fetch(`${BASE_URL}/api/audits/${auditId}/items`, { headers: authHdrs() });
     const items = await res.json();
 
     document.getElementById('audit-items-body').innerHTML = items.map(i => `
