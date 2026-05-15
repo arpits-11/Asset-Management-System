@@ -847,10 +847,10 @@
                             <div class="card-header">
                                 <span class="card-title">🏭 Inventory Items</span>
                                 <div style="display: flex; gap: 8px;">
-                                    <button class="btn-btn-outline btn-sm" onclick="loadInventoryTransactions()">📋
+                                    <button class="btn btn-outline btn-sm" id="all-tx-btn"onclick="loadInventoryTransactions()">📋
                                         All
                                         Transactions</button>
-                                    <button class="btn-btn-primary btn-sm" onclick="openInventoryModal()">+ Add
+                                    <button class="btn btn-primary btn-sm" id="add-inv-btn" onclick="openInventoryModal()">+ Add
                                         Item</button>
                                 </div>
                             </div>
@@ -1219,7 +1219,7 @@
                     </div>
 
                     <div class="page" id="page-depreciation">
-                        <div class="card" style="border-left:4px solid #4f6ef7; margin-bottom:20px;">
+                        <div class="card" id="bulk-depr-card" style="border-left:4px solid #4f6ef7; margin-bottom:20px;">
                             <div class="card-header">
                                 <span class="card-title">⚡ Bulk Calculate Depreciation</span>
                             </div>
@@ -1284,7 +1284,7 @@
                                         style="padding:6px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-size:13px; font-family:system-ui;">
                                         <option value="">All Years</option>
                                     </select>
-                                    <button class="btn btn-outline btn-sm" onclick="openSingleDepreciationModal()">+
+                                    <button class="btn btn-outline btn-sm" id="add-depr-btn" onclick="openSingleDepreciationModal()">+
                                         Single Asset</button>
                                 </div>
                             </div>
@@ -2147,7 +2147,7 @@
         </div>
     </div>
 
-    <script src="index.js?v=8"></script>
+    <script src="index.js?v=11"></script>
 </body>
 
 </html>

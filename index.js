@@ -72,10 +72,13 @@ function showApp() {
     }
     if (currentUser.role === 'employee') {
         document.getElementById('nav-activity').style.display = 'none';
-    }
-    if (currentUser.role === 'employee') {
         document.getElementById('nav-audits').style.display = 'none';
+        document.getElementById('nav-reports').style.display = 'none';
     }
+    // if (currentUser.role === 'employee') {
+    //     document.getElementById('nav-audits').style.display = 'none';
+    //     document.getElementById('nav-reports').style.display = 'none';
+    // }
 
     showPage('dashboard');
     loadDashboard();
@@ -677,6 +680,11 @@ showApp = function () {
         const addCat = document.getElementById('add-cat-btn');
         if (addAsset) addAsset.style.display = 'none';
         if (addCat) addCat.style.display = 'none';
+
+        const allTxBtn = document.getElementById('all-tx-btn');
+        const addInvBtn = document.getElementById('add-inv-btn');
+        if (allTxBtn) allTxBtn.style.display = 'none';
+        if (addInvBtn) addInvBtn.style.display = 'none';
     }
 };
 
@@ -1794,6 +1802,10 @@ function renderWarranties(assets) {
 async function loadReports() {
     try {
         const res = await fetch(`${BASE_URL}/api/reports/summary`, { headers: authHdrs() });
+        if (!res.ok) {
+            console.log('Access denied or server error loading reports.');
+            return;
+        }
         const data = await res.json();
 
         document.getElementById('r-purchase').textContent = formatCurrency(data.totalPurchaseValue);
@@ -2200,6 +2212,10 @@ async function loadInventoryTransactions() {
 
     try {
         const res = await fetch(`${BASE_URL}/api/inventory/transactions/all`, { headers: authHdrs() });
+        if (!res.ok) {
+            document.getElementById('inv-history-list').innerHTML = '<p style="color:#ef4444; text-align:center; padding:20px;">Access denied: You do not have permission to view this.</p>';
+            return;
+        }
         const txs = await res.json();
         const list = document.getElementById('inv-history-list');
 
@@ -2249,9 +2265,15 @@ showApp = function () {
     _p3ShowApp();
     populateYearDropdowns();
     loadInsuranceBadge();
+    if (currentUser?.role !== 'admin') {
+        const bulkCard = document.getElementById('bulk-depr-card');
+        if (bulkCard) bulkCard.style.display = 'none';
+    }
     if (currentUser?.role === 'employee') {
         const addIns = document.getElementById('add-ins-btn');
+        const addDepr = document.getElementById('add-depr-btn');
         if (addIns) addIns.style.display = 'none';
+        if (addDepr) addDepr.style.display = 'none';
     }
 };
 
@@ -2775,9 +2797,6 @@ async function submitRequest() {
     const modal = document.getElementById('request-modal');
     const itemInput = modal.querySelector('#req-item');
     const reasonInput = modal.querySelector('#req-reason');
-
-    // console.log("Checking Input Element:", itemInput);
-    // console.log("The text JS found is:", itemInput.value);
 
     const itemRequested = itemInput.value.trim();
     const reason = reasonInput.value.trim();
