@@ -742,7 +742,7 @@ function renderCategories(cats) {
             </div>
             ${c.description ? `<p style="font-size:13px; color:#94a3b8;">${c.description}</p>` : ''}
             <div class="category-footer">
-                <span class="category-count">0 assets</span>
+                <span class="category-count">${c.assetCount || 0} asset${c.assetCount === 1 ? '' : 's'}</span>
                 ${currentUser?.role !== 'employee' ? `
                 <div class="category-actions">
                     <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c._id}')">✏️</button>

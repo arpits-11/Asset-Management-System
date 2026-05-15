@@ -560,7 +560,12 @@ app.get('/api/activity', authMiddleware, requireRole('admin', 'manager'), async 
 app.get('/api/categories', authMiddleware, async (req, res) => {
     try {
         const categories = await Category.find({}).sort({ name: 1 });
-        res.json(categories);
+
+        const categoriesWithCount = await Promise.all(categories.map(async (cat) => {
+            const count = await Asset.countDocuments({categoryName: { $regex: cat.name, $options: 'i' }});
+            return { ...cat.toObject(), assetCount: count };
+        }));
+        res.json(categoriesWithCount);
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
@@ -687,6 +692,11 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         const assetId = await generateAssetId();
         const user = await User.findById(req.userId);
 
+        let safeCategoryId = null;
+        if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+            safeCategoryId = new mongoose.Types.ObjectId(categoryId);
+        }
+
         const asset = new Asset({
             assetId, name, description, categoryId, categoryName, subCategory,
             status: status || 'active',
@@ -733,9 +743,17 @@ app.put('/api/assets/:id', authMiddleware, requireRole('admin', 'manager'), asyn
         const oldAsset = await Asset.findById(req.params.id);
         const user = await User.findById(req.userId);
 
+        const updateBody = { ...req.body, updatedAt: new Date() };
+        if (updateBody.categoryId && mongoose.Types.ObjectId.isValid(updateBody.categoryId)) {
+            updateBody.categoryId = new mongoose.Types.ObjectId(updateBody.categoryId);
+        } else if (updateBody.categoryId === '') {
+            updateBody.categoryId = null;
+        }
+
         const updated = await Asset.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updatedAt: new Date() },
+            updateBody,
+            // { ...req.body, updatedAt: new Date() },
             { returnDocument: 'after' }
         );
         if (req.body.assignedTo && req.body.assignedTo !== oldAsset.assignedTo?.toString()) {
@@ -1588,7 +1606,7 @@ app.get('/api/finance/stats', authMiddleware, async (req, res) => {
 app.get('/api/requests', authMiddleware, async (req, res) => {
     try {
         const query = req.userRole === 'employee' ? { userId: req.userId } : {};
-        const requests = await AssetRequest.find(query).sort({ created: -1 });
+        const requests = await AssetRequest.find(query).sort({ createdAt: -1 });
         res.json(requests);
     }
     catch (err) { res.status(500).json({ message: 'Server error' }); }
@@ -1668,11 +1686,10 @@ if (!isTesting) {
         const adminEmails = admins.map(a => a.email).join(',');
 
         if (dueMaint.length > 0 && adminEmails) {
-            sendNotification(adminEmails, 'AssetMS: Upcoming Maintenance', `You have ${dueMaint.lehgth} maintenance task due in the next 7 days.`);
+            sendNotification(adminEmails, 'AssetMS: Upcoming Maintenance', `You have ${dueMaint.length} maintenance task due in the next 7 days.`);
         }
     });
 }
-
 
 const PORT = process.env.PORT || 5000;
 if (!isTesting) {
