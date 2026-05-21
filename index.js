@@ -889,6 +889,7 @@ function renderAssets(assets) {
     }
     tbody.innerHTML = assets.map(a => `
         <tr>
+        <td><input type="checkbox" class="asset-checkbox" value="${a._id}" onchange="toggleDeleteSelectedBtn()"></td>
             <td>
                 <span style="font-family:monospace; font-size:12px; color:#4f6ef7;
                     background:rgba(79,110,247,0.1); padding:2px 8px; border-radius:4px;">
@@ -1273,109 +1274,265 @@ async function populateUserDropdown(selectId, selectedId) {
 }
 
 // csv import
-function importAssetsCSV() {
-    const input = document.getElementById('csv-file-input');
-    input.value = '';
-    input.click();
+// function importAssetsCSV() {
+//     const input = document.getElementById('csv-file-input');
+//     input.value = '';
+//     input.click();
+// }
+
+async function importAssetsCSV(jsonData) {
+    if (!jsonData || jsonData.length === 0) {
+        alert('No data found to import.');
+        return;
+    }
+
+    const totalAssets = jsonData.length;
+    console.log(`Starting bulk import of ${totalAssets} assets in chunks...`);
+
+    const chunkSize = 100;
+    let importedCount = 0;
+    let failedCount = 0;
+    let errorLog = [];
+
+    const importBtn = document.querySelector('button[onclick="document.getElementById(\'csv-file-input\').click()"]')
+        || document.querySelector('button[onclick*="csv-file-input"]')
+        || document.querySelector('button[onclick*="importAssetsCSV"]');
+    const originalText = importBtn ? importBtn.innerHTML : 'Import';
+
+    try {
+        for (let i = 0; i < jsonData.length; i += chunkSize) {
+            const chunk = jsonData.slice(i, i + chunkSize);
+
+            if (importBtn) {
+                importBtn.innerHTML = `⏳ Importing (${i} / ${totalAssets})...`;
+                importBtn.disabled = true;
+            }
+
+            const res = await fetch(`${BASE_URL}/api/assets/bulk-import`, {
+                method: 'POST',
+                headers: authHdrs(),
+                body: JSON.stringify({ assets: chunk })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || 'Server rejected this chunk.');
+            }
+
+            const result = await res.json();
+            importedCount += (result.success || 0);
+            failedCount += (result.failed || 0);
+            if (result.errors) errorLog = errorLog.concat(result.errors);
+        }
+
+        alert(`🎉 Bulk Import Complete!\nSuccessfully added: ${importedCount} assets.\nFailed rows: ${failedCount}.`);
+
+        if (errorLog.length > 0) {
+            console.warn('Import row details/errors:', errorLog);
+        }
+
+        loadAssets();
+        loadDashboardStats();
+
+    } catch (err) {
+        console.error('Bulk import failed:', err);
+        alert('Failed to complete import: ' + err.message);
+    } finally {
+        if (importBtn) {
+            importBtn.innerHTML = originalText;
+            importBtn.disabled = false;
+        }
+    }
 }
-async function handleCSVFile(event) {
+
+function handleCSVFile(event) {
     const file = event.target.files[0];
     if (!file) return;
-    if (!file.name.endsWith('.csv')) {
-        alert('Please select a valid .csv file.');
-        return;
-    }
-    const text = await file.text();
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
-    if (lines.length < 2) {
-        alert('CSV file is empty or has no data rows.');
-        return;
-    }
-    const headers = lines[0].split(',').map(h =>
-        h.replace(/"/g, '').trim().toLowerCase().replace(/\s+/g, '')
-    );
-    const fieldMap = {
-        'name': 'name',
-        'assetname': 'name',
-        'description': 'description',
-        'category': 'category',
-        'categoryname': 'category',
-        'subcategory': 'subCategory',
-        'status': 'status',
-        'condition': 'condition',
-        'location': 'location',
-        'assignedto': 'assignedTo',
-        'purchasedate': 'purchaseDate',
-        'purchaseprice': 'purchasePrice',
-        'currentvalue': 'currentValue',
-        'vendor': 'vendor',
-        'vendorname': 'vendor',
-        'serialnumber': 'serialNumber',
-        'serial': 'serialNumber',
-        'assettag': 'assetTag',
-        'warrantyexpiry': 'warrantyExpiry',
-        'warranty': 'warrantyExpiry',
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const text = e.target.result;
+
+        const rows = text.split(/\r?\n/);
+
+        if (rows.length < 2) {
+            alert('File is empty or missing data.');
+            return;
+        }
+
+        const headers = rows[0].split(',').map(h => h.trim().replace(/(^"|"$)/g, ''));
+        const jsonData = [];
+
+        const parseRow = (row) => {
+            const result = [];
+            let cell = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                const char = row[i];
+                if (char === '"' && row[i + 1] === '"') {
+                    cell += '"'; i++;
+                } else if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(cell); cell = '';
+                } else {
+                    cell += char;
+                }
+            }
+            result.push(cell);
+            return result.map(c => c.trim().replace(/(^"|"$)/g, ''));
+        };
+
+        const safeDate = (dateStr) => {
+            if (!dateStr) return '';
+            const cleanStr = dateStr.trim();
+            const parts = cleanStr.split(/[-/]/);
+            // If it is DD-MM-YYYY, flip it to YYYY-MM-DD
+            if (parts.length === 3 && parts[2].length === 4) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            return cleanStr;
+        };
+
+        for (let i = 1; i < rows.length; i++) {
+            if (!rows[i].trim()) continue;
+            const cols = parseRow(rows[i]);
+            const obj = {};
+
+            headers.forEach((header, index) => {
+                const val = cols[index] || '';
+                if (header === 'Name') obj.name = val;
+                if (header === 'Description') obj.description = val;
+                if (header === 'Category') obj.category = val;
+                if (header === 'Sub Category') obj.subCategory = val;
+                if (header === 'Status') obj.status = val;
+                if (header === 'Condition') obj.condition = val;
+                if (header === 'Location') obj.location = val;
+                if (header === 'Assigned To') obj.assignedTo = val;
+                if (header === 'Purchase Date') obj.purchaseDate = safeDate(val);
+                if (header === 'Purchase Price') obj.purchasePrice = val;
+                if (header === 'Current Value') obj.currentValue = val;
+                if (header === 'Vendor') obj.vendor = val;
+                if (header === 'Serial Number') obj.serialNumber = val;
+                if (header === 'Asset Tag') obj.assetTag = val;
+                if (header === 'Warranty Expiry') obj.warrantyExpiry = safeDate(val);
+            });
+            jsonData.push(obj);
+        }
+
+        event.target.value = '';
+        importAssetsCSV(jsonData);
     };
 
-    const assets = [];
-    const parseErrors = [];
-    for (let i = 1; i < lines.length; i++) {
-        const values = [];
-        let current = '';
-        let inQuotes = false;
-        for (const char of lines[i]) {
-            if (char === '"') { inQuotes = !inQuotes; }
-            else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-            else { current += char; }
-        }
-        values.push(current.trim());
-        const row = {};
-        headers.forEach((h, idx) => {
-            const field = fieldMap[h] || h;
-            row[field] = values[idx]?.replace(/"/g, '').trim() || '';
-        });
-        if (!row.name) {
-            parseErrors.push(`Row ${i + 1}: skipped — no name`);
-            continue;
-        }
-        assets.push(row)
-
-    }
-    if (!assets.length) {
-        alert('No valid rows found in CSV.\n\nMake sure your CSV has a "Name" column.');
-        return;
-    }
-
-    const confirmMsg = `Found ${assets.length} asset(s) to import${parseErrors.length ? ` (${parseErrors.length} rows skipped)` : ''}.\n\nProceed?`;
-    if (!confirm(confirmMsg)) return;
-
-    const btn = document.querySelector('button[onclick="importAssetsCSV()"]');
-    if (btn) { btn.textContent = '⏳ Importing...'; btn.disabled = true; }
-    try {
-        const res = await fetch(`${BASE_URL}/api/assets/bulk-import`, {
-            method: 'POST',
-            headers: authHdrs(),
-            body: JSON.stringify({ assets })
-        });
-        const data = await res.json();
-
-        if (res.ok) {
-            let msg = `✅ ${data.message}`;
-            if (data.errors && data.errors.length) {
-                msg += `\n\nFailed rows:\n` + data.errors.join('\n');
-            }
-            alert(msg);
-            loadAssets();
-        } else {
-            alert('❌ Import failed: ' + data.message);
-        }
-    } catch (err) {
-        alert('❌ Could not connect to server.');
-    } finally {
-        if (btn) { btn.textContent = '📤 Bulk Import'; btn.disabled = false; }
-    }
+    reader.readAsText(file);
 }
+
+// async function handleCSVFile(event) {
+//     const file = event.target.files[0];
+//     if (!file) return;
+
+//     if (!file.name.endsWith('.csv')) {
+//         alert('Please select a valid .csv file.');
+//         return;
+//     }
+//     const text = await file.text();
+//     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+//     if (lines.length < 2) {
+//         alert('CSV file is empty or has no data rows.');
+//         return;
+//     }
+
+//     const headers = lines[0].split(',').map(h =>
+//         h.replace(/"/g, '').trim().toLowerCase().replace(/\s+/g, '')
+//     );
+//     const fieldMap = {
+//         'name': 'name',
+//         'assetname': 'name',
+//         'description': 'description',
+//         'category': 'category',
+//         'categoryname': 'category',
+//         'subcategory': 'subCategory',
+//         'status': 'status',
+//         'condition': 'condition',
+//         'location': 'location',
+//         'assignedto': 'assignedTo',
+//         'purchasedate': 'purchaseDate',
+//         'purchaseprice': 'purchasePrice',
+//         'currentvalue': 'currentValue',
+//         'vendor': 'vendor',
+//         'vendorname': 'vendor',
+//         'serialnumber': 'serialNumber',
+//         'serial': 'serialNumber',
+//         'assettag': 'assetTag',
+//         'warrantyexpiry': 'warrantyExpiry',
+//         'warranty': 'warrantyExpiry',
+//     };
+
+//     const assets = [];
+//     const parseErrors = [];
+//     for (let i = 1; i < lines.length; i++) {
+//         const values = [];
+//         let current = '';
+//         let inQuotes = false;
+//         for (const char of lines[i]) {
+//             if (char === '"') { inQuotes = !inQuotes; }
+//             else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+//             else { current += char; }
+//         }
+//         values.push(current.trim());
+
+//         const row = {};
+//         headers.forEach((h, idx) => {
+//             const field = fieldMap[h] || h;
+//             row[field] = values[idx]?.replace(/"/g, '').trim() || '';
+//         });
+
+//         if (!row.name) {
+//             parseErrors.push(`Row ${i + 1}: skipped — no name`);
+//             continue;
+//         }
+//         assets.push(row)
+
+//     }
+//     if (!assets.length) {
+//         alert('No valid rows found in CSV.\n\nMake sure your CSV has a "Name" column.');
+//         return;
+//     }
+
+//     const confirmMsg = `Found ${assets.length} asset(s) to import${parseErrors.length ? ` (${parseErrors.length} rows skipped)` : ''}.\n\nProceed?`;
+//     if (!confirm(confirmMsg)) return;
+
+//     event.target.value = '';
+
+//     await importAssetsCSV(assets);
+
+//     // const btn = document.querySelector('button[onclick="importAssetsCSV()"]');
+//     // if (btn) { btn.textContent = '⏳ Importing...'; btn.disabled = true; }
+//     // try {
+//     //     const res = await fetch(`${BASE_URL}/api/assets/bulk-import`, {
+//     //         method: 'POST',
+//     //         headers: authHdrs(),
+//     //         body: JSON.stringify({ assets })
+//     //     });
+//     //     const data = await res.json();
+
+//     //     if (res.ok) {
+//     //         let msg = `✅ ${data.message}`;
+//     //         if (data.errors && data.errors.length) {
+//     //             msg += `\n\nFailed rows:\n` + data.errors.join('\n');
+//     //         }
+//     //         alert(msg);
+//     //         loadAssets();
+//     //     } else {
+//     //         alert('❌ Import failed: ' + data.message);
+//     //     }
+//     // } catch (err) {
+//     //     alert('❌ Could not connect to server.');
+//     // } finally {
+//     //     if (btn) { btn.textContent = '📤 Bulk Import'; btn.disabled = false; }
+//     // }
+// }
 
 // csv export
 function exportAssetsCSV() {
@@ -1908,6 +2065,71 @@ async function loadInventory() {
     await loadInventoryStats();
     await loadInventoryItems();
     await loadLowStockAlerts();
+}
+
+function toggleAllAssetCheckboxes(source) {
+    const checkboxes = document.querySelectorAll('.asset-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    toggleDeleteSelectedBtn();
+};
+
+function toggleDeleteSelectedBtn() {
+    const checked = document.querySelectorAll('.asset-checkbox:checked');
+    const btn = document.getElementById('btn-delete-selected');
+    if (btn) {
+        btn.style.display = checked.length > 0 ? 'inline-block' : 'none';
+    }
+}
+
+async function deleteSelectedAssets() {
+    const checked = document.querySelectorAll('.asset-checkbox:checked');
+    if (checked.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${checked.length} selected asset(s)?`)) return;
+
+    const assetIds = Array.from(checked).map(cb => cb.value);
+
+    try {
+        const res = await fetch(`${BASE_URL}/api/assets/bulk-delete`, {
+            method: 'POST',
+            headers: authHdrs(),
+            body: JSON.stringify({ assetIds })
+        });
+
+        if (res.ok) {
+            document.getElementById('select-all-assets').checked = false;
+            toggleDeleteSelectedBtn();
+            loadAssets();
+            loadDashboardStats();
+        } else {
+            alert("Failed to delete assets.");
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function truncateAllAssets() {
+    if (!confirm("⚠️ WARNING: This will permanently wipe ALL assets from the database. This cannot be undone. Are you absolutely sure?")) return;
+    if (!confirm("⚠️ DOUBLE CHECK: Are you really sure you want to empty the asset registry?")) return;
+
+    try {
+        const res = await fetch(`${BASE_URL}/api/assets/truncate`, {
+            method: 'DELETE',
+            headers: authHdrs()
+        });
+        if (res.ok) {
+            alert("All assets have been successfully deleted.");
+            document.getElementById('select-all-assets').checked = false;
+            toggleDeleteSelectedBtn();
+            loadAssets();
+            loadDashboardStats();
+        } else {
+            alert("Failed to truncate assets. Make sure you are logged in as an Admin.");
+        }
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 
