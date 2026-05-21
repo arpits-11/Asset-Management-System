@@ -580,7 +580,6 @@ async function confirmDelete() {
     }
 }
 
-
 async function loadActivity() {
     const el = document.getElementById('activity-log-list');
     el.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:40px; font-size:14px;">Loading...</p>';
@@ -1406,6 +1405,28 @@ function exportAssetsCSV() {
     URL.revokeObjectURL(url);
 }
 
+function exportAssetsTemplateCSV() {
+    const headers = [
+        'Name', 'Description', 'Category', 'Sub Category', 'Status',
+        'Condition', 'Location', 'Assigned To', 'Purchase Date',
+        'Purchase Price', 'Current Value', 'Vendor', 'Serial Number',
+        'Asset Tag', 'Warranty Expiry'
+    ];
+
+    const csv = headers.join(',');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `AssetMS_Import_Template.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
 const _origLoadDashboard = loadDashboard;
 loadDashboard = async function () {
     await _origLoadDashboard();
@@ -1888,6 +1909,226 @@ async function loadInventory() {
     await loadInventoryItems();
     await loadLowStockAlerts();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function loadInventoryStats() {
     try {
