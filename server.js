@@ -10,7 +10,8 @@ const cron = require('node-cron');
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors({ origin: '*' }));
 
 const isTesting = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
@@ -317,7 +318,7 @@ app.post('/api/auth/register', async (req, res) => {
             role: isFirstUser ? 'admin' : 'employee',
             department: department || '',
             phone: phone || '',
-            isApproved: isFirstUser // first user auto-approved as admin
+            isApproved: isFirstUser
         });
         await user.save();
 
@@ -400,7 +401,6 @@ app.put('/api/auth/profile', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-
 
 app.get('/api/users', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
@@ -562,7 +562,7 @@ app.get('/api/categories', authMiddleware, async (req, res) => {
         const categories = await Category.find({}).sort({ name: 1 });
 
         const categoriesWithCount = await Promise.all(categories.map(async (cat) => {
-            const count = await Asset.countDocuments({categoryName: { $regex: cat.name, $options: 'i' }});
+            const count = await Asset.countDocuments({ categoryName: { $regex: cat.name, $options: 'i' } });
             return { ...cat.toObject(), assetCount: count };
         }));
         res.json(categoriesWithCount);
@@ -866,6 +866,25 @@ app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
             totalValue: totalValue[0]?.total || 0,
             byCategory
         });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.post('/api/assets/bulk-delete', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { assetIds } = req.body;
+        await Asset.deleteMany({ _id: { $in: assetIds } });
+        res.json({ message: 'Selected assets deleted' });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.delete('/api/assets/truncate', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        await Asset.deleteMany({});
+        res.json({ message: 'All assets truncated' });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
