@@ -671,6 +671,37 @@ app.get('/api/assets/:id/history', authMiddleware, async (req, res) => {
     }
 });
 
+app.post('/api/assets/check-duplicate', authMiddleware, async (req, res) => {
+    try {
+        const { serialNumber, name, categoryId, excludeId } = req.body;
+        const results = {};
+
+        if (serialNumber && serialNumber.trim()) {
+            const query = {
+                serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
+                status: { $ne: 'disposed' }
+            };
+            if (excludeId) query._id = { $ne: excludeId };
+            const found = await Asset.findOne(query).select('name assetId');
+            if (found) results.serialNumber = { duplicate: true, asset: found };
+        }
+
+        if (name && categoryId) {
+            const query = {
+                name: { $regex: `^${name.trim()}$`, $options: 'i' },
+                status: { $ne: 'disposed' }
+            };
+            if (excludeId) query._id = { $ne: excludeId };
+            const found = await Asset.findOne(query).select('name assetId categoryName');
+            if (found) results.name = { duplicate: true, asset: found };
+        }
+
+        res.json({ hasDuplicate: Object.keys(results).length > 0, results });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
         const {
@@ -687,6 +718,36 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         if (currentValue !== undefined && currentValue < 0) return res.status(400).json({ message: 'Current value cannot be negative' });
         if (purchaseDate && warrantyExpiry && new Date(warrantyExpiry) < new Date(purchaseDate)) {
             return res.status(400).json({ message: 'Warranty expiry cannot be before purchase date' });
+        }
+
+        if (serialNumber && serialNumber.trim()) {
+            const existingSerial = await Asset.findOne({
+                serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
+                status: { $ne: 'disposed' }
+            });
+            if (existingSerial) {
+                return res.status(409).json({
+                    message: `Duplicate serial number — asset "${existingSerial.name}" (${existingSerial.assetId}) already has serial number "${serialNumber.trim()}".`,
+                    duplicateType: 'serialNumber',
+                    existingAsset: { id: existingSerial._id, name: existingSerial.name, assetId: existingSerial.assetId }
+                });
+            }
+        }
+
+        if (name && categoryId) {
+            const existingName = await Asset.findOne({
+                name: { $regex: `^${name.trim()}$`, $options: 'i' },
+                categoryId: safeCategoryId,
+                status: { $ne: 'disposed' }
+            });
+            if (existingName && !req.body.forceCreate) {
+                return res.status(409).json({
+                    message: `An asset named "${name.trim()}" already exists in this category (${existingName.assetId}). Click "Save Anyway" to create it as a separate asset.`,
+                    duplicateType: 'name',
+                    existingAsset: { id: existingName._id, name: existingName.name, assetId: existingName.assetId },
+                    canForce: true
+                });
+            }
         }
 
         const assetId = await generateAssetId();
@@ -742,6 +803,22 @@ app.put('/api/assets/:id', authMiddleware, requireRole('admin', 'manager'), asyn
     try {
         const oldAsset = await Asset.findById(req.params.id);
         const user = await User.findById(req.userId);
+
+        const { serialNumber, assetTag } = req.body;
+
+        if (serialNumber && serialNumber.trim()) {
+            const existingSerial = await Asset.findOne({
+                serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
+                status: { $ne: 'disposed' },
+                _id: { $ne: req.params.id }
+            });
+            if (existingSerial) {
+                return res.status(409).json({
+                    message: `Duplicate serial number — asset "${existingSerial.name}" (${existingSerial.assetId}) already has this serial number.`,
+                    duplicateType: 'serialNumber'
+                });
+            }
+        }
 
         const updateBody = { ...req.body, updatedAt: new Date() };
         if (updateBody.categoryId && mongoose.Types.ObjectId.isValid(updateBody.categoryId)) {
