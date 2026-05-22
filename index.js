@@ -15,7 +15,7 @@ function showMsg(elId, message, type = 'error') {
     const el = document.getElementById(elId);
     if (!el) return;
     el.className = type === 'error' ? 'error-msg' : type === 'success' ? 'success-msg' : 'info-msg';
-    el.textContent = message;
+    el.innerHTML = message;
     el.style.display = 'block';
 }
 
