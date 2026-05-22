@@ -1026,7 +1026,7 @@ function closeAssetModal() {
     editingAssetId = null;
 }
 
-async function saveAsset() {
+async function saveAsset(forceCreate = false) {
     const catEl = document.getElementById('a-category');
     const catName = catEl.options[catEl.selectedIndex]?.text?.replace(/^..\s/, '') || '';
     const assignEl = document.getElementById('a-assigned-to');
@@ -1049,7 +1049,8 @@ async function saveAsset() {
         warrantyExpiry: document.getElementById('a-warranty').value,
         location: document.getElementById('a-location').value.trim(),
         assignedTo: assignEl.value || null,
-        assignedToName: assignEl.value ? assignedToName : ''
+        assignedToName: assignEl.value ? assignedToName : '',
+        forceCreate
     };
 
     clearMsg('asset-modal-error');
@@ -1084,6 +1085,16 @@ async function saveAsset() {
             loadAssets();
             loadAssetStats();
             setTimeout(() => closeAssetModal(), 1500);
+        } else if (res.status === 409) {
+            if (data.duplicateType === 'serialNumber') {
+                showMsg('asset-modal-error',
+                    `❌ Duplicate Serial Number — Asset <strong>${data.existingAsset?.name}</strong> (${data.existingAsset?.assetId}) already uses this serial number. Please use a different serial number.`);
+            } else if (data.duplicateType === 'name' && data.canForce) {
+                showMsg('asset-modal-error',
+                    `⚠️ ${data.message} <br><button onclick="saveAsset(true)" style="margin-top:8px; padding:6px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; cursor:pointer; font-family:system-ui; font-size:13px;">Save Anyway</button>`);
+            } else {
+                showMsg('asset-modal-error', data.message);
+            }
         } else {
             showMsg('asset-modal-error', data.error || data.message);
         }
@@ -1332,7 +1343,7 @@ async function importAssetsCSV(jsonData) {
         }
 
         loadAssets();
-        loadDashboardStats();
+        // loadDashboard();
 
     } catch (err) {
         console.error('Bulk import failed:', err);
@@ -1387,7 +1398,6 @@ function handleCSVFile(event) {
             if (!dateStr) return '';
             const cleanStr = dateStr.trim();
             const parts = cleanStr.split(/[-/]/);
-            // If it is DD-MM-YYYY, flip it to YYYY-MM-DD
             if (parts.length === 3 && parts[2].length === 4) {
                 return `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
@@ -2100,7 +2110,7 @@ async function deleteSelectedAssets() {
             document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
-            loadDashboardStats();
+            // loadDashboardStats();
         } else {
             alert("Failed to delete assets.");
         }
@@ -2131,226 +2141,6 @@ async function truncateAllAssets() {
         console.error(err);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 async function loadInventoryStats() {
     try {
