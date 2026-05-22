@@ -1201,7 +1201,18 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
         const user = await User.findById(req.userId);
         const results = { success: 0, failed: 0, errors: [] };
 
-        let baseCount = await Asset.countDocuments();
+        // let baseCount = await Asset.countDocuments();
+        const allAssets = await Asset.find({}, 'assetId');
+        let highestIdNum = 0;
+
+        for (const a of allAssets) {
+            if (a.assetId && a.assetId.startsWith('AST-')) {
+                const num = parseInt(a.assetId.replace('AST-', ''), 10);
+                if (!isNaN(num) && num > highestIdNum) {
+                    highestIdNum = num;
+                }
+            }
+        }
 
         for (const row of assets) {
             try {
@@ -1211,15 +1222,30 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     continue;
                 }
 
+                if (row.serialNumber && row.serialNumber.trim()) {
+                    const existingSerial = await Asset.findOne({
+                        serialNumber: { $regex: `^${row.serialNumber.trim()}$`, $options: 'i' },
+                        status: { $ne: 'disposed' }
+                    });
+                    
+                    if (existingSerial) {
+                        results.failed++;
+                        results.errors.push(`"${row.name}" skipped - Duplicate Serial Number (${row.serialNumber})`);
+                        continue;
+                    }
+                }
+
                 let assetId;
                 let attempts = 0;
-                while (attempts < 10) {
-                    baseCount++;
-                    assetId = `AST-${String(baseCount).padStart(4, '0')}`;
-                    const exists = await Asset.findOne({ assetId });
-                    if (!exists) break;
-                    attempts++;
-                }
+                highestIdNum++;
+                const assetId = `AST-${String(highestIdNum).padStart(4, '0')}`;
+                // while (attempts < 10) {
+                //     baseCount++;
+                //     assetId = `AST-${String(baseCount).padStart(4, '0')}`;
+                //     const exists = await Asset.findOne({ assetId });
+                //     if (!exists) break;
+                //     attempts++;
+                // }
                 const asset = new Asset({
                     assetId,
                     name: row.name.trim(),
