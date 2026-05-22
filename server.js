@@ -720,6 +720,11 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
             return res.status(400).json({ message: 'Warranty expiry cannot be before purchase date' });
         }
 
+        let safeCategoryId = null;
+        if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+            safeCategoryId = new mongoose.Types.ObjectId(categoryId);
+        }
+
         if (serialNumber && serialNumber.trim()) {
             const existingSerial = await Asset.findOne({
                 serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
@@ -752,11 +757,6 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
 
         const assetId = await generateAssetId();
         const user = await User.findById(req.userId);
-
-        let safeCategoryId = null;
-        if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
-            safeCategoryId = new mongoose.Types.ObjectId(categoryId);
-        }
 
         const asset = new Asset({
             assetId, name, description, categoryId, categoryName, subCategory,
