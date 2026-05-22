@@ -1235,8 +1235,8 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     }
                 }
 
-                let assetId;
-                let attempts = 0;
+                // let assetId;
+                // let attempts = 0;
                 highestIdNum++;
                 const assetId = `AST-${String(highestIdNum).padStart(4, '0')}`;
                 // while (attempts < 10) {
