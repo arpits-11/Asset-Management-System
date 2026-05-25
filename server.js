@@ -103,15 +103,17 @@ const assetHistorySchema = new mongoose.Schema({
 const AssetHistory = mongoose.model('AssetHistory', assetHistorySchema);
 
 async function generateAssetId() {
-    let attempts = 0;
-    while (attempts < 100) {
-        const count = await Asset.countDocuments();
-        const newId = `AST-${String(count + 1 + attempts).padStart(4, '0')}`;
-        const exists = await Asset.findOne({ assetId: newId });
-        if (!exists) return newId;
-        attempts++;
+    const allAssets = await Asset.find({}, 'assetId');
+    let highestIdNum = 0;
+    for (const a of allAssets) {
+        if (a.assetId && a.assetId.startsWith('AST-')) {
+            const num = parseInt(a.assetId.replace('AST-', ''), 10);
+            if (!isNaN(num) && num > highestIdNum) {
+                highestIdNum = num;
+            }
+        }
     }
-    return `AST-${Date.now()}`;
+    return `AST-${String(highestIdNum + 1).padStart(4, '0')}`;
 }
 
 const activitySchema = new mongoose.Schema({
@@ -1201,17 +1203,6 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
         const user = await User.findById(req.userId);
         const results = { success: 0, failed: 0, errors: [] };
 
-        // const allAssets = await Asset.find({}, 'assetId');
-        // let highestIdNum = 0;
-        // for (const a of allAssets) {
-        //     if (a.assetId && a.assetId.startsWith('AST-')) {
-        //         const num = parseInt(a.assetId.replace('AST-', ''), 10);
-        //         if (!isNaN(num) && num > highestIdNum) {
-        //             highestIdNum = num;
-        //         }
-        //     }
-        // }
-
         const allExisting = await Asset.find({}, 'assetId');
         let highestIdNum = 0;
         for (const a of allExisting) {
@@ -1236,22 +1227,9 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     continue;
                 }
 
-                const rowName     = row.name.trim();
-                const rowSerial   = (row.serialNumber || '').trim();
-                const serialKey   = rowSerial.toLowerCase();
-
-                // if (row.serialNumber && row.serialNumber.trim()) {
-                //     const existingSerial = await Asset.findOne({
-                //         serialNumber: { $regex: `^${row.serialNumber.trim()}$`, $options: 'i' },
-                //         status: { $ne: 'disposed' }
-                //     });
-                    
-                //     if (existingSerial) {
-                //         results.failed++;
-                //         results.errors.push(`"${row.name}" skipped - Duplicate Serial Number (${row.serialNumber})`);
-                //         continue;
-                //     }
-                // }
+                const rowName = row.name.trim();
+                const rowSerial = (row.serialNumber || '').trim();
+                const serialKey = rowSerial.toLowerCase();
 
                 if (rowSerial) {
                     if (existingSerials.has(serialKey)) {
@@ -1266,17 +1244,9 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     }
                 }
 
-                // let assetId;
-                // let attempts = 0;
                 highestIdNum++;
                 const assetId = `AST-${String(highestIdNum).padStart(4, '0')}`;
-                // while (attempts < 10) {
-                //     baseCount++;
-                //     assetId = `AST-${String(baseCount).padStart(4, '0')}`;
-                //     const exists = await Asset.findOne({ assetId });
-                //     if (!exists) break;
-                //     attempts++;
-                // }
+
                 const asset = new Asset({
                     assetId,
                     name: row.name.trim(),
@@ -1299,9 +1269,9 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     createdBy: req.userId
                 });
                 await asset.save();
-                  if (rowSerial) batchSerials.add(serialKey);
+                if (rowSerial) batchSerials.add(serialKey);
                 batchNames.add(nameKey);
-                existingSerials.add(serialKey); // also update DB set
+                existingSerials.add(serialKey);
                 existingNames.add(nameKey);
                 results.success++;
             }
