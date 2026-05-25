@@ -1201,18 +1201,32 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
         const user = await User.findById(req.userId);
         const results = { success: 0, failed: 0, errors: [] };
 
-        // let baseCount = await Asset.countDocuments();
-        const allAssets = await Asset.find({}, 'assetId');
-        let highestIdNum = 0;
+        // const allAssets = await Asset.find({}, 'assetId');
+        // let highestIdNum = 0;
+        // for (const a of allAssets) {
+        //     if (a.assetId && a.assetId.startsWith('AST-')) {
+        //         const num = parseInt(a.assetId.replace('AST-', ''), 10);
+        //         if (!isNaN(num) && num > highestIdNum) {
+        //             highestIdNum = num;
+        //         }
+        //     }
+        // }
 
-        for (const a of allAssets) {
+        const allExisting = await Asset.find({}, 'assetId');
+        let highestIdNum = 0;
+        for (const a of allExisting) {
             if (a.assetId && a.assetId.startsWith('AST-')) {
                 const num = parseInt(a.assetId.replace('AST-', ''), 10);
-                if (!isNaN(num) && num > highestIdNum) {
-                    highestIdNum = num;
-                }
+                if (!isNaN(num) && num > highestIdNum) highestIdNum = num;
             }
         }
+
+        const existingSerials = new Set(
+            (await Asset.find({ serialNumber: { $ne: '' }, status: { $ne: 'disposed' } }, 'serialNumber'))
+                .map(a => a.serialNumber.trim().toLowerCase())
+        );
+
+        const batchSerials = new Set();
 
         for (const row of assets) {
             try {
@@ -1222,15 +1236,32 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     continue;
                 }
 
-                if (row.serialNumber && row.serialNumber.trim()) {
-                    const existingSerial = await Asset.findOne({
-                        serialNumber: { $regex: `^${row.serialNumber.trim()}$`, $options: 'i' },
-                        status: { $ne: 'disposed' }
-                    });
+                const rowName     = row.name.trim();
+                const rowSerial   = (row.serialNumber || '').trim();
+                const serialKey   = rowSerial.toLowerCase();
+
+                // if (row.serialNumber && row.serialNumber.trim()) {
+                //     const existingSerial = await Asset.findOne({
+                //         serialNumber: { $regex: `^${row.serialNumber.trim()}$`, $options: 'i' },
+                //         status: { $ne: 'disposed' }
+                //     });
                     
-                    if (existingSerial) {
+                //     if (existingSerial) {
+                //         results.failed++;
+                //         results.errors.push(`"${row.name}" skipped - Duplicate Serial Number (${row.serialNumber})`);
+                //         continue;
+                //     }
+                // }
+
+                if (rowSerial) {
+                    if (existingSerials.has(serialKey)) {
                         results.failed++;
-                        results.errors.push(`"${row.name}" skipped - Duplicate Serial Number (${row.serialNumber})`);
+                        results.errors.push(`"${rowName}" skipped — Duplicate Serial Number (${rowSerial}) already exists in database`);
+                        continue;
+                    }
+                    if (batchSerials.has(serialKey)) {
+                        results.failed++;
+                        results.errors.push(`"${rowName}" skipped — Duplicate Serial Number (${rowSerial}) appears multiple times in import file`);
                         continue;
                     }
                 }
@@ -1268,6 +1299,10 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     createdBy: req.userId
                 });
                 await asset.save();
+                  if (rowSerial) batchSerials.add(serialKey);
+                batchNames.add(nameKey);
+                existingSerials.add(serialKey); // also update DB set
+                existingNames.add(nameKey);
                 results.success++;
             }
             catch (err) {
