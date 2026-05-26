@@ -866,6 +866,15 @@ app.put('/api/assets/:id', authMiddleware, requireRole('admin', 'manager'), asyn
     }
 });
 
+app.delete('/api/assets/truncate', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        await Asset.deleteMany({});
+        res.json({ message: 'All assets truncated' });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 app.delete('/api/assets/:id', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const asset = await Asset.findById(req.params.id);
@@ -955,15 +964,6 @@ app.post('/api/assets/bulk-delete', authMiddleware, requireRole('admin', 'manage
         const { assetIds } = req.body;
         await Asset.deleteMany({ _id: { $in: assetIds } });
         res.json({ message: 'Selected assets deleted' });
-    } catch (err) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-app.delete('/api/assets/truncate', authMiddleware, requireRole('admin'), async (req, res) => {
-    try {
-        await Asset.deleteMany({});
-        res.json({ message: 'All assets truncated' });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
