@@ -1,5 +1,24 @@
 const BASE_URL = 'https://asset-management-system-wgix.onrender.com';
 
+function toggleTheme() {
+    const isDark = document.getElementById('theme-checkbox').checked;
+    applyTheme(isDark);
+    localStorage.setItem('ams_theme', isDark ? 'dark' : 'light');
+}
+
+function applyTheme(isDark) {
+    document.body.classList.toggle('dark-theme', isDark);
+    const checkbox = document.getElementById('theme-checkbox');
+    const label = document.getElementById('theme-label');
+    if (checkbox) checkbox.checked = isDark;
+    if (label) label.textContent = isDark ? '🌙 Dark' : '☀️ Light';
+}
+
+(function initTheme() {
+    const saved = localStorage.getItem('ams_theme');
+    applyTheme(saved ? saved === 'dark' : true);
+})();
+
 let currentUser = null;
 let allUsers = [];
 let editingUserId = null;
@@ -2133,12 +2152,13 @@ async function truncateAllAssets() {
             document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
-            loadDashboardStats();
+            // loadDashboardStats();
         } else {
             alert("Failed to truncate assets. Make sure you are logged in as an Admin.");
         }
     } catch (err) {
         console.error(err);
+        alert("An error occurred while trying to truncate.");
     }
 }
 
