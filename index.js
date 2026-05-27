@@ -3120,19 +3120,17 @@ async function loadEquipmentMaster() {
 
 function renderEquipmentMaster(eqs) {
     const tbody = document.getElementById('equipment-table-body');
-    if (!tbody) return;
-
+    if(!tbody) return;
+    
     if (!eqs.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">No master records found. Click "+ Add Equipment" to create one.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#94a3b8;">No master records found. Click "+ Add Equipment" to create one.</td></tr>';
         return;
     }
-
+    
     tbody.innerHTML = eqs.map(eq => `
         <tr>
             <td>${eq.manufacturer}</td>
-            <td style="font-weight:500;">${eq.modelName}</td>
-            <td><span class="badge badge-pending">${eq.categoryName || '—'}</span></td>
-            <td style="color:#22c55e; font-weight:500;">₹${(eq.standardPrice || 0).toLocaleString('en-IN')}</td>
+            <td style="font-weight:500;">${eq.productCode}</td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
                 <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">✏️</button>
@@ -3149,26 +3147,19 @@ function populateEquipmentDropdowns() {
     const select = document.getElementById('a-master-select');
     if (!select) return;
     select.innerHTML = '<option value="">-- Custom Asset (Manual Entry) --</option>' +
-        allEquipmentMaster.map(eq => `<option value="${eq._id}">${eq.manufacturer} ${eq.modelName}</option>`).join('');
+        allEquipmentMaster.map(eq => `<option value="${eq._id}">${eq.manufacturer} - ${eq.productCode}</option>`).join('');
 }
 
-function autofillFormMaster() {
+function autofillFromMaster() {
     const id = document.getElementById('a-master-select').value;
     if (!id) return;
     const eq = allEquipmentMaster.find(e => e._id === id);
     if (!eq) return;
 
-    document.getElementById('a-name').value = `${eq.manufacturer} ${eq.modelName}`;
-    document.getElementById('a-vendor').value = eq.manufacturer || '';
-    document.getElementById('a-description').value = eq.specifications || '';
-
-    if (eq.standardPrice) {
-        document.getElementById('a-purchase-price').value = eq.standardPrice;
-        document.getElementById('a-current-value').value = eq.standardPrice;
-    }
-    if (eq.categoryId) {
-        document.getElementById('a-category').value = eq.categoryId;
-    }
+    document.getElementById('a-name').value = eq.productCode || '';
+    
+    const vendorEl = document.getElementById('a-vendor');
+    if (vendorEl) vendorEl.value = eq.manufacturer || '';
 }
 
 function openEqModal(id = null) {
@@ -3177,22 +3168,13 @@ function openEqModal(id = null) {
     document.getElementById('save-eq-btn').textContent = id ? 'Save Changes' : 'Add Equipment';
 
     document.getElementById('eq-manufacturer').value = '';
-    document.getElementById('eq-model').value = '';
-    document.getElementById('eq-price').value = '';
-    document.getElementById('eq-specs').value = '';
-
-    const catSelect = document.getElementById('eq-category');
-    catSelect.innerHTML = '<option value="">Select Category...</option>' +
-        allCategories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+    document.getElementById('eq-code').value = '';
 
     if (id) {
         const eq = allEquipmentMaster.find(e => e._id === id);
         if (eq) {
-            document.getElementById('eq-manufacturer').value = eq.manufacturer;
-            document.getElementById('eq-model').value = eq.modelName;
-            document.getElementById('eq-price').value = eq.standardPrice || '';
-            document.getElementById('eq-specs').value = eq.specifications || '';
-            catSelect.value = eq.categoryId || '';
+            document.getElementById('eq-manufacturer').value = eq.manufacturer || '';
+            document.getElementById('eq-code').value = eq.productCode || '';
         }
     }
     document.getElementById('equipment-modal').classList.add('open');
@@ -3204,18 +3186,13 @@ function closeEqModal() {
 }
 
 async function saveEq() {
-    const catEl = document.getElementById('eq-category');
     const body = {
         manufacturer: document.getElementById('eq-manufacturer').value.trim(),
-        modelName: document.getElementById('eq-model').value.trim(),
-        categoryId: catEl.value || null,
-        categoryName: catEl.value ? catEl.options[catEl.selectedIndex].text : '',
-        standardPrice: parseFloat(document.getElementById('eq-price').value) || 0,
-        specifications: document.getElementById('eq-specs').value.trim()
+        productCode: document.getElementById('eq-code').value.trim()
     };
 
-    if (!body.manufacturer || body.modelName) {
-        alert("⚠️ Manufacturer and Model Name are required.");
+    if(!body.manufacturer || !body.productCode) {
+        alert("⚠️ Manufacturer (OEM) and Product Code are required.");
         return;
     }
 
@@ -3230,13 +3207,11 @@ async function saveEq() {
         if (res.ok) {
             closeEqModal();
             loadEquipmentMaster();
-        }
-        else {
+        } else {
             const data = await res.json();
             alert(data.message || 'Failed to save');
         }
-    }
-    catch (e) {
+    } catch(e) {
         console.error(e);
         alert("Connection error");
     } finally {
@@ -3246,10 +3221,9 @@ async function saveEq() {
 }
 
 async function deleteEq(id) {
-    if (!confirm("⚠️ Delete this equipment from the master catalog")) return;
+    if(!confirm("⚠️ Delete this equipment from the master catalog?")) return;
     try {
         await fetch(`${BASE_URL}/api/equipment-master/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadEquipmentMaster();
-    }
-    catch (e) { console.error(e); }
+    } catch(e) { console.error(e); }
 }
