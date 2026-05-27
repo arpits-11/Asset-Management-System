@@ -3119,18 +3119,20 @@ async function loadEquipmentMaster() {
 }
 
 function renderEquipmentMaster(eqs) {
-    const body = document.getElementById('equipment-table-body');
+    const tbody = document.getElementById('equipment-table-body');
     if (!tbody) return;
+
     if (!eqs.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">No master records found. Click "+ Add Equipment" to create one.</td></tr>';
         return;
     }
+
     tbody.innerHTML = eqs.map(eq => `
         <tr>
             <td>${eq.manufacturer}</td>
             <td style="font-weight:500;">${eq.modelName}</td>
             <td><span class="badge badge-pending">${eq.categoryName || '—'}</span></td>
-            <td style="color:#22c55e; font-weight:500;">${formatCurrency(eq.standardPrice)}</td>
+            <td style="color:#22c55e; font-weight:500;">₹${(eq.standardPrice || 0).toLocaleString('en-IN')}</td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
                 <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">✏️</button>
@@ -3197,7 +3199,7 @@ function openModal(id = null) {
 }
 
 function closeEqModal() {
-    docuemnt.getElementById('equipment-modal').classList.remove('open');
+    document.getElementById('equipment-modal').classList.remove('open');
     editingEqId = null;
 }
 
