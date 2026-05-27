@@ -1463,113 +1463,6 @@ function handleCSVFile(event) {
     reader.readAsText(file);
 }
 
-// async function handleCSVFile(event) {
-//     const file = event.target.files[0];
-//     if (!file) return;
-
-//     if (!file.name.endsWith('.csv')) {
-//         alert('Please select a valid .csv file.');
-//         return;
-//     }
-//     const text = await file.text();
-//     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-
-//     if (lines.length < 2) {
-//         alert('CSV file is empty or has no data rows.');
-//         return;
-//     }
-
-//     const headers = lines[0].split(',').map(h =>
-//         h.replace(/"/g, '').trim().toLowerCase().replace(/\s+/g, '')
-//     );
-//     const fieldMap = {
-//         'name': 'name',
-//         'assetname': 'name',
-//         'description': 'description',
-//         'category': 'category',
-//         'categoryname': 'category',
-//         'subcategory': 'subCategory',
-//         'status': 'status',
-//         'condition': 'condition',
-//         'location': 'location',
-//         'assignedto': 'assignedTo',
-//         'purchasedate': 'purchaseDate',
-//         'purchaseprice': 'purchasePrice',
-//         'currentvalue': 'currentValue',
-//         'vendor': 'vendor',
-//         'vendorname': 'vendor',
-//         'serialnumber': 'serialNumber',
-//         'serial': 'serialNumber',
-//         'assettag': 'assetTag',
-//         'warrantyexpiry': 'warrantyExpiry',
-//         'warranty': 'warrantyExpiry',
-//     };
-
-//     const assets = [];
-//     const parseErrors = [];
-//     for (let i = 1; i < lines.length; i++) {
-//         const values = [];
-//         let current = '';
-//         let inQuotes = false;
-//         for (const char of lines[i]) {
-//             if (char === '"') { inQuotes = !inQuotes; }
-//             else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-//             else { current += char; }
-//         }
-//         values.push(current.trim());
-
-//         const row = {};
-//         headers.forEach((h, idx) => {
-//             const field = fieldMap[h] || h;
-//             row[field] = values[idx]?.replace(/"/g, '').trim() || '';
-//         });
-
-//         if (!row.name) {
-//             parseErrors.push(`Row ${i + 1}: skipped — no name`);
-//             continue;
-//         }
-//         assets.push(row)
-
-//     }
-//     if (!assets.length) {
-//         alert('No valid rows found in CSV.\n\nMake sure your CSV has a "Name" column.');
-//         return;
-//     }
-
-//     const confirmMsg = `Found ${assets.length} asset(s) to import${parseErrors.length ? ` (${parseErrors.length} rows skipped)` : ''}.\n\nProceed?`;
-//     if (!confirm(confirmMsg)) return;
-
-//     event.target.value = '';
-
-//     await importAssetsCSV(assets);
-
-//     // const btn = document.querySelector('button[onclick="importAssetsCSV()"]');
-//     // if (btn) { btn.textContent = '⏳ Importing...'; btn.disabled = true; }
-//     // try {
-//     //     const res = await fetch(`${BASE_URL}/api/assets/bulk-import`, {
-//     //         method: 'POST',
-//     //         headers: authHdrs(),
-//     //         body: JSON.stringify({ assets })
-//     //     });
-//     //     const data = await res.json();
-
-//     //     if (res.ok) {
-//     //         let msg = `✅ ${data.message}`;
-//     //         if (data.errors && data.errors.length) {
-//     //             msg += `\n\nFailed rows:\n` + data.errors.join('\n');
-//     //         }
-//     //         alert(msg);
-//     //         loadAssets();
-//     //     } else {
-//     //         alert('❌ Import failed: ' + data.message);
-//     //     }
-//     // } catch (err) {
-//     //     alert('❌ Could not connect to server.');
-//     // } finally {
-//     //     if (btn) { btn.textContent = '📤 Bulk Import'; btn.disabled = false; }
-//     // }
-// }
-
 // csv export
 function exportAssetsCSV() {
     if (!allAssets.length) { alert('No assets to export!'); return; }
@@ -3189,3 +3082,172 @@ document.addEventListener('click', (e) => {
         }
     }
 });
+
+let allEquipmentMaster = [];
+let editingEqId = null;
+
+const _eqShowPage = showPage;
+showPage = function (page) {
+    _eqShowPage(page);
+    if (page === 'equipment') {
+        document.getElementById('page-title').textContent = '📖 Equipment Master';
+        loadEquipmentMaster();
+    }
+};
+
+const _eqShowApp = showApp;
+showApp = function () {
+    _eqShowApp();
+    if (currentUser?.role === 'employee') {
+        const navEq = document.getElementById('nav-equipment');
+        const addEq = document.getElementById('add-eq-btn');
+        if (navEq) navEq.style.display = 'none';
+        if (addEq) addEq.style.display = 'none';
+    } else {
+        loadEquipmentMaster();
+    }
+};
+
+async function loadEquipmentMaster() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/equipment-master`, { headers: authHdrs() });
+        allEquipmentMaster = await res.json();
+        renderEquipmentMaster(allEquipmentMaster);
+        populateEquipmentDropdowns();
+    }
+    catch (err) { console.error('Equipment load error:', err); }
+}
+
+function renderEquipmentMaster(eqs) {
+    const body = document.getElementById('equipment-table-body');
+    if (!tbody) return;
+    if (!eqs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">No master records found. Click "+ Add Equipment" to create one.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = eqs.map(eq => `
+        <tr>
+            <td>${eq.manufacturer}</td>
+            <td style="font-weight:500;">${eq.modelName}</td>
+            <td><span class="badge badge-pending">${eq.categoryName || '—'}</span></td>
+            <td style="color:#22c55e; font-weight:500;">${formatCurrency(eq.standardPrice)}</td>
+            <td>
+                ${currentUser?.role !== 'employee' ? `
+                <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">✏️</button>
+                ` : ''}
+                ${currentUser?.role === 'admin' ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteEq('${eq._id}')">🗑️</button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function populateEquipmentDropdowns() {
+    const select = document.getElementById('a-master-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Custom Asset (Manual Entry) --</option>' +
+        allEquipmentMaster.map(eq => `<option value="${eq._id}">${eq.manufacturer} ${eq.modelName}</option>`).join('');
+}
+
+function autofillFormMaster() {
+    const id = document.getElementById('a-master-select').value;
+    if (!id) return;
+    const eq = allEquipmentMaster.find(e => e._id === id);
+    if (!eq) return;
+
+    document.getElementById('a-name').value = `${eq.manufacturer} ${eq.modelName}`;
+    document.getElementById('a-vendor').value = eq.manufacturer || '';
+    document.getElementById('a-description').value = eq.specifications || '';
+
+    if (eq.standardPrice) {
+        document.getElementById('a-purchase-price').value = eq.standardPrice;
+        document.getElementById('a-current-value').value = eq.standardPrice;
+    }
+    if (eq.categoryId) {
+        document.getElementById('a-category').value = eq.categoryId;
+    }
+}
+
+function openModal(id = null) {
+    editingEqId = id;
+    document.getElementById('eq-modal-title').textContent = id ? 'Edit Equipment' : 'Add Equipment';
+    document.getElementById('save-eq-btn').textContent = id ? 'Save Changes' : 'Add Equipment';
+
+    document.getElementById('eq-manufacturer').value = '';
+    document.getElementById('eq-model').value = '';
+    document.getElementById('eq-price').value = '';
+    document.getElementById('eq-specs').value = '';
+
+    const catSelect = document.getElementById('eq-category');
+    catSelect.innerHTML = '<option value="">Select Category...</option>' +
+        allCategories.map(c => `<option value="${c._id}">${c.name}</option>`).join('');
+
+    if (id) {
+        const eq = allEquipmentMaster.find(e => e._id === id);
+        if (eq) {
+            document.getElementById('eq-manufacturer').value = eq.manufacturer;
+            document.getElementById('eq-model').value = eq.modelName;
+            document.getElementById('eq-price').value = eq.standardPrice || '';
+            document.getElementById('eq-specs').value = eq.specifications || '';
+            catSelect.value = eq.categoryId || '';
+        }
+    }
+    document.getElementById('equipment-modal').classList.add('open');
+}
+
+function closeEqModal() {
+    docuemnt.getElementById('equipment-modal').classList.remove('open');
+    editingEqId = null;
+}
+
+async function saveEq() {
+    const catEl = document.getElementById('eq-category');
+    const body = {
+        manufacturer: document.getElementById('eq-manufacturer').value.trim(),
+        modelName: document.getElementById('eq-model').value.trim(),
+        categoryId: catEl.value || null,
+        categoryName: catEl.value ? catEl.options[catEl.selectedIndex].text : '',
+        standardPrice: parseFloat(document.getElementById('eq-price').value) || 0,
+        specifications: document.getElementById('eq-specs').value.trim()
+    };
+
+    if (!body.manufacturer || body.modelName) {
+        alert("⚠️ Manufacturer and Model Name are required.");
+        return;
+    }
+
+    const btn = document.getElementById('save-eq-btn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+
+    try {
+        const url = editingEqId ? `${BASE_URL}/api/equipment-master/${editingEqId}` : `${BASE_URL}/api/equipment-master`;
+        const method = editingEqId ? 'PUT' : 'POST';
+        const res = await fetch(url, { method, headers: authHdrs(), body: JSON.stringify(body) });
+
+        if (res.ok) {
+            closeEqModal();
+            loadEquipmentMaster();
+        }
+        else {
+            const data = await res.json();
+            alert(data.message || 'Failed to save');
+        }
+    }
+    catch (e) {
+        console.error(e);
+        alert("Connection error");
+    } finally {
+        btn.textContent = editingEqId ? 'Save Changes' : 'Add Equipment';
+        btn.disabled = false;
+    }
+}
+
+async function deleteEq(id) {
+    if (!confirm("⚠️ Delete this equipment from the master catalog")) return;
+    try {
+        await fetch(`${BASE_URL}/api/equipment-master/${id}`, { method: 'DELETE', headers: authHdrs() });
+        loadEquipmentMaster();
+    }
+    catch (e) { console.error(e); }
+}

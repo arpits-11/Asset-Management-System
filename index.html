@@ -7,6 +7,7 @@
     <title>Asset Management System</title>
     <link rel="stylesheet" href="index.css?v=5">
 </head>
+
 <body>
     <!--AUTH PAGES-->
     <div id="auth-page">
@@ -617,6 +618,9 @@
                     <div class="nav-section-title" id="admin-nav-section">Administration</div>
                     <button class="nav-item" id="nav-users" onclick="showPage('users')">
                         <span class="icon">👥</span> User Management
+                    </button>
+                    <button class="nav-item" id="nav-equipment" onclick="showPage('equipment')">
+                        <span class="nav-icon">📖</span><span class="nav-text">Equipment Master</span>
                     </button>
                     <button class="nav-item" id="nav-approvals" onclick="showPage('approvals')">
                         <span class="icon">✅</span> Pending Approvals
@@ -1610,7 +1614,14 @@
                 <button class="modal-close" onclick="closeAssetModal()">✕</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group" style="grid-column:1/-1 ;">
+                <div class="form-group"
+                    style="grid-column: 1 / -1; background: rgba(79, 110, 247, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed #4f6ef7;">
+                    <label style="color: #4f6ef7; font-weight: bold;">⚡ Auto-fill from Equipment Master</label>
+                    <select id="a-master-select" onchange="autofillFromMaster()">
+                        <option value="">-- Custom Asset (Manual Entry) --</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Asset Name *</label>
                     <input type="text" id="a-name" placeholder="e.g. Dell Laptop, Tata Sierra">
                 </div>
@@ -2167,7 +2178,65 @@
         </div>
     </div>
 
-    <script src="index.js?v=19"></script>
+    <div id="page-equipment" class="page">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📖 Equipment Master Catalog</span>
+                <button class="btn btn-primary btn-sm" onclick="openEqModal()" id="add-eq-btn">+ Add Equipment</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Manufacturer</th>
+                            <th>Model Name</th>
+                            <th>Category</th>
+                            <th>Standard Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipment-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="equipment-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="eq-modal-title">Add Equipment</span>
+                <button class="modal-close" onclick="closeEqModal">✕</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Manufacturer *</label>
+                    <input type="text" id="eq-manufacturer" placeholder="e.g., Lenevo, Dell">
+                </div>
+                <div class="form-group">
+                    <label>Model Name *</label>
+                    <input type="text" id="eq-model" placeholder="e.g., Vostro 15">
+                </div>
+                <div class="form-group">
+                    <label>Default Category</label>
+                    <select id="eq-category"></select>
+                </div>
+                <div class="form-group">
+                    <label>Standard Price (₹)</label>
+                    <input type="number" id="eq-price">
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Default Specifications / Description</label>
+                    <input type="text" id="eq-specs" placeholder="e.g., 16GB RAM, 512GB SSD, Intel i7">
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:16px;">
+                <button class="btn btn-outline" onclick="closeEqModal()" style="flex:1;">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEq()" style="flex:2;" id="save-eq-btn">Save Equipment</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="index.js?v=23"></script>
 </body>
 
 </html>
