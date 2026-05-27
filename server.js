@@ -1269,10 +1269,12 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     createdBy: req.userId
                 });
                 await asset.save();
-                if (rowSerial) batchSerials.add(serialKey);
-                batchNames.add(nameKey);
-                existingSerials.add(serialKey);
-                existingNames.add(nameKey);
+                if (rowSerial) {
+                    batchSerials.add(serialKey);
+                    existingSerials.add(serialKey);
+                }
+                // batchNames.add(nameKey);
+                // existingNames.add(nameKey);
                 results.success++;
             }
             catch (err) {
