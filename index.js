@@ -1344,18 +1344,25 @@ async function importAssetsCSV(jsonData) {
                 body: JSON.stringify({ assets: chunk })
             });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Server rejected this chunk.');
+            const result = await res.json();
+
+            if (res.status === 500) {
+                throw new Error(result.message || 'Server error on chunk starting at row ' + (i + 1));
             }
 
-            const result = await res.json();
             importedCount += (result.success || 0);
             failedCount += (result.failed || 0);
-            if (result.errors) errorLog = errorLog.concat(result.errors);
+            if (result.errors && result.errors.length) {
+                errorLog = errorLog.concat(result.errors);
+            }
         }
 
-        alert(`🎉 Bulk Import Complete!\nSuccessfully added: ${importedCount} assets.\nFailed rows: ${failedCount}.`);
+        let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
+        if (failedCount > 0) {
+            msg += `\nSkipped (duplicates/errors): ${failedCount} rows.`;
+            msg += `\n\nSee browser console for details on skipped rows.`;
+        }
+        alert(msg);
 
         if (errorLog.length > 0) {
             console.warn('Import row details/errors:', errorLog);
@@ -2149,7 +2156,9 @@ async function truncateAllAssets() {
         });
         if (res.ok) {
             alert("All assets have been successfully deleted.");
-            document.getElementById('select-all-assets').checked = false;
+            const selectAllBox = document.getElementById('select-all-assets');
+            if (selectAllBox) selectAllBox.checked = false;
+            // document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
             // loadDashboardStats();
