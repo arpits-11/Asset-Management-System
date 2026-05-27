@@ -24,15 +24,6 @@ if (!isTesting) {
     }
 }
 
-// const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
-// if (MONGO_URI) {
-// mongoose.connect(process.env.MONGO_URI)
-//     .then(() => console.log('MongoDB connected'))
-//     .catch(err => console.log('MongoDB error:', err.message));
-//     } else if (process.env.NODE_ENV !== 'test') {
-//     console.log('MongoDB error: MONGO_URI not defined');
-// };
-
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -259,6 +250,18 @@ const auditItemSchema = new mongoose.Schema({
     auditedAt: Date
 });
 const AuditItem = mongoose.model('AuditItem', auditItemSchema);
+
+const equipmentMasterSchema = new mongoose.Schema({
+    manufacturer: { type: String, required: true },
+    modelName: { type: String, required: true },
+    partNumber: { type: String },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+    categoryName: { type: String },
+    standardPrice: { type: Number, default: 0 },
+    specifications: { type: String },
+    requiresMaintenance: { type: Boolean, default: false }
+}, { timestamps: true });
+const EquipmentMaster = mongoose.model('EquipmentMaster', equipmentMasterSchema);
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -1273,8 +1276,7 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     batchSerials.add(serialKey);
                     existingSerials.add(serialKey);
                 }
-                // batchNames.add(nameKey);
-                // existingNames.add(nameKey);
+
                 results.success++;
             }
             catch (err) {
@@ -1819,6 +1821,43 @@ if (!isTesting) {
         }
     });
 }
+
+app.get('/api/equipment-master', authMiddleware, async (req, res) => {
+    try {
+        const equipment = await EquipmentMaster.find().sort({ manufacturer: 1, modelName: 1 });
+        res.json(equipment);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error fetching equipment master' });
+    }
+});
+
+app.post('/api/equipment-master', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const eq = new EquipmentMaster(req.body);
+        await eq.save();
+        res.status(201).json({ message: 'Equipment added to master catalog', equipment: eq });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to save equipment' });
+    }
+});
+
+app.put('/api/equipment-master/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const eq = await EquipmentMaster.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ message: 'Equipment updated successfully', equipment: eq });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to update equipment' });
+    }
+});
+
+app.delete('/api/equipment-master/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        await EquipmentMaster.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Equipment removed from master catalog' });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to delete equipment' });
+    }
+});
 
 const PORT = process.env.PORT || 5000;
 if (!isTesting) {
