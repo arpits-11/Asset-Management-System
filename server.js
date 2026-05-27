@@ -253,13 +253,7 @@ const AuditItem = mongoose.model('AuditItem', auditItemSchema);
 
 const equipmentMasterSchema = new mongoose.Schema({
     manufacturer: { type: String, required: true },
-    modelName: { type: String, required: true },
-    partNumber: { type: String },
-    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-    categoryName: { type: String },
-    standardPrice: { type: Number, default: 0 },
-    specifications: { type: String },
-    requiresMaintenance: { type: Boolean, default: false }
+    productCode: { type: String, required: true }
 }, { timestamps: true });
 const EquipmentMaster = mongoose.model('EquipmentMaster', equipmentMasterSchema);
 
@@ -1824,7 +1818,7 @@ if (!isTesting) {
 
 app.get('/api/equipment-master', authMiddleware, async (req, res) => {
     try {
-        const equipment = await EquipmentMaster.find().sort({ manufacturer: 1, modelName: 1 });
+        const equipment = await EquipmentMaster.find().sort({ manufacturer: 1, productCode: 1 });
         res.json(equipment);
     } catch (err) {
         res.status(500).json({ message: 'Server error fetching equipment master' });
