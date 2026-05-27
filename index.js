@@ -1303,13 +1303,6 @@ async function populateUserDropdown(selectId, selectedId) {
     } catch (err) { console.log('User dropdown error:', err); }
 }
 
-// csv import
-// function importAssetsCSV() {
-//     const input = document.getElementById('csv-file-input');
-//     input.value = '';
-//     input.click();
-// }
-
 async function importAssetsCSV(jsonData) {
     if (!jsonData || jsonData.length === 0) {
         alert('No data found to import.');
