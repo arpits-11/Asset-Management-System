@@ -3171,7 +3171,7 @@ function autofillFormMaster() {
     }
 }
 
-function openModal(id = null) {
+function openEqModal(id = null) {
     editingEqId = id;
     document.getElementById('eq-modal-title').textContent = id ? 'Edit Equipment' : 'Add Equipment';
     document.getElementById('save-eq-btn').textContent = id ? 'Save Changes' : 'Add Equipment';
