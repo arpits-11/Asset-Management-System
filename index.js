@@ -260,6 +260,11 @@ async function loadDashboard() {
         document.getElementById('stat-managers').textContent = data.managerCount;
         document.getElementById('stat-pending').textContent = data.pendingUsers;
 
+        const tA = document.getElementById('stat-total-assets');
+        const aA = document.getElementById('stat-active-assets');
+        if (tA) tA.textContent = data.totalAssets || 0;
+        if (aA) aA.textContent = data.activeAssets || 0;
+
         renderDashboardActivity(data.recentActivities);
         renderRoleDistribution(data);
     } catch (err) {
@@ -1350,19 +1355,19 @@ async function importAssetsCSV(jsonData) {
             }
         }
 
-        let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
         if (failedCount > 0) {
+             let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
             msg += `\nSkipped (duplicates/errors): ${failedCount} rows.`;
             msg += `\n\nSee browser console for details on skipped rows.`;
+            alert(msg);
         }
-        alert(msg);
 
         if (errorLog.length > 0) {
             console.warn('Import row details/errors:', errorLog);
         }
 
         loadAssets();
-        // loadDashboard();
+        loadDashboard();
 
     } catch (err) {
         console.error('Bulk import failed:', err);
@@ -1506,18 +1511,18 @@ function exportAssetsTemplateCSV() {
     URL.revokeObjectURL(url);
 }
 
-const _origLoadDashboard = loadDashboard;
-loadDashboard = async function () {
-    await _origLoadDashboard();
-    try {
-        const res = await fetch(`${BASE_URL}/api/dashboard/stats`, { headers: authHdrs() });
-        const data = await res.json();
-        const tA = document.getElementById('stat-total-assets');
-        const aA = document.getElementById('stat-active-assets');
-        if (tA) tA.textContent = data.totalAssets || 0;
-        if (aA) aA.textContent = data.activeAssets || 0;
-    } catch (e) { }
-};
+// const _origLoadDashboard = loadDashboard;
+// loadDashboard = async function () {
+//     await _origLoadDashboard();
+//     try {
+//         const res = await fetch(`${BASE_URL}/api/dashboard/stats`, { headers: authHdrs() });
+//         const data = await res.json();
+//         const tA = document.getElementById('stat-total-assets');
+//         const aA = document.getElementById('stat-active-assets');
+//         if (tA) tA.textContent = data.totalAssets || 0;
+//         if (aA) aA.textContent = data.activeAssets || 0;
+//     } catch (e) { }
+// };
 
 window.addEventListener('load', () => {
     setTimeout(async () => {
