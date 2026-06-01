@@ -21,6 +21,7 @@ function applyTheme(isDark) {
 
 let currentUser = null;
 let allUsers = [];
+let allLocations = [];
 let editingUserId = null;
 let deleteUserId = null;
 
@@ -982,6 +983,12 @@ function filterAssets() {
     renderAssets(filtered);
 }
 
+const locSelect = document.getElementById('a-location');
+if (locSelect) {
+    locSelect.innerHTML = '<option value="">Select location...</option>' +
+        allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+}
+
 // Asset modal
 async function openAssetModal() {
     editingAssetId = null;
@@ -1356,7 +1363,7 @@ async function importAssetsCSV(jsonData) {
         }
 
         if (failedCount > 0) {
-             let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
+            let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
             msg += `\nSkipped (duplicates/errors): ${failedCount} rows.`;
             msg += `\n\nSee browser console for details on skipped rows.`;
             alert(msg);
@@ -1367,7 +1374,7 @@ async function importAssetsCSV(jsonData) {
         }
 
         loadAssets();
-        loadDashboard();
+        // loadDashboard();
 
     } catch (err) {
         console.error('Bulk import failed:', err);
@@ -3118,13 +3125,13 @@ async function loadEquipmentMaster() {
 
 function renderEquipmentMaster(eqs) {
     const tbody = document.getElementById('equipment-table-body');
-    if(!tbody) return;
-    
+    if (!tbody) return;
+
     if (!eqs.length) {
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#94a3b8;">No master records found. Click "+ Add Equipment" to create one.</td></tr>';
         return;
     }
-    
+
     tbody.innerHTML = eqs.map(eq => `
         <tr>
             <td>${eq.manufacturer}</td>
@@ -3155,7 +3162,7 @@ function autofillFromMaster() {
     if (!eq) return;
 
     document.getElementById('a-name').value = eq.productCode || '';
-    
+
     const vendorEl = document.getElementById('a-vendor');
     if (vendorEl) vendorEl.value = eq.manufacturer || '';
 }
@@ -3189,7 +3196,7 @@ async function saveEq() {
         productCode: document.getElementById('eq-code').value.trim()
     };
 
-    if(!body.manufacturer || !body.productCode) {
+    if (!body.manufacturer || !body.productCode) {
         alert("⚠️ Manufacturer (OEM) and Product Code are required.");
         return;
     }
@@ -3209,7 +3216,7 @@ async function saveEq() {
             const data = await res.json();
             alert(data.message || 'Failed to save');
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         alert("Connection error");
     } finally {
@@ -3219,9 +3226,95 @@ async function saveEq() {
 }
 
 async function deleteEq(id) {
-    if(!confirm("⚠️ Delete this equipment from the master catalog?")) return;
+    if (!confirm("⚠️ Delete this equipment from the master catalog?")) return;
     try {
         await fetch(`${BASE_URL}/api/equipment-master/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadEquipmentMaster();
-    } catch(e) { console.error(e); }
+    } catch (e) { console.error(e); }
+}
+
+const _eqSettingsShowPage = showPage;
+showPage = function (page) {
+    _eqSettingsShowPage(page);
+    if (page === 'equipment') {
+        document.getElementById('page-title').textContent = '⚙️ Master Data Settings';
+        loadEquipmentMaster();
+        loadCategories();
+        loadLocations();
+    }
+};
+
+function switchEqTab(tab) {
+    document.querySelectorAll('[id^="eqtab-"]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('[id^="eq-content-"]').forEach(el => el.style.display = 'none');
+    document.getElementById(`eqtab-${tab}`).classList.add('active');
+    document.getElementById(`eq-content-${tab}`).style.display = 'block';
+}
+
+async function loadLocations() {
+    try {
+        const res = await fetch(`${BASE_URL}/api/locations`, { headers: authHdrs() });
+        allLocations = await res.json();
+        renderLocations();
+    }
+    catch (err) { console.error('Error loading locations', err); }
+}
+
+function renderLocations() {
+    const tbody = document.getElementById('locations-table-body');
+    if (!tbody) return;
+    if (!allLocations.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#94a3b8;">No locations found. Add one above.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = allLocations.map(loc => `
+        <tr>
+            <td style="font-weight:500;">${loc.name}</td>
+            <td>${loc.description || '—'}</td>
+            <td>
+                ${currentUser?.role === 'admin' ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteLocation('${loc._id}')">🗑️</button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openLocationModal() {
+    document.getElementById('loc-name').value = '';
+    document.getElementById('loc-description').value = '';
+    document.getElementById('location-modal').classList.add('open');
+}
+
+function closeLocationModal() {
+    document.getElementById('location-modal').classList.remove('open');
+}
+
+async function saveLocation() {
+    const name = document.getElementById('loc-name').value.trim();
+    const desc = document.getElementById('loc-description').value.trim();
+    if (!name) return alert('Location Name is required');
+
+    const btn = document.getElementById('save-loc-btn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+
+    try {
+        const res = await fetch(`${BASE_URL}/api/locations`, {
+            method: 'POST', headers: authHdrs(), body: JSON.stringify({ name, description: desc })
+        });
+        if (res.ok) {
+            closeLocationModal();
+            loadLocations();
+        } else { alert('Failed to save location'); }
+    } catch (e) { alert('Error saving location'); }
+
+    btn.textContent = 'Save Location'; btn.disabled = false;
+}
+
+async function deleteLocation(id) {
+    if (!confirm('⚠️ Are you sure you want to delete this location?')) return;
+    try {
+        await fetch(`${BASE_URL}/api/locations/${id}`, { method: 'DELETE', headers: authHdrs() });
+        loadLocations();
+    } catch (e) { console.error(e); }
 }
