@@ -1453,6 +1453,7 @@ function handleCSVFile(event) {
             headers.forEach((header, index) => {
                 const val = cols[index] || '';
                 if (header === 'Name') obj.name = val;
+                if (header === 'Full Name') obj.fullName = val;
                 if (header === 'Description') obj.description = val;
                 if (header === 'Category') obj.category = val;
                 if (header === 'Sub Category') obj.subCategory = val;
@@ -1482,12 +1483,12 @@ function handleCSVFile(event) {
 function exportAssetsCSV() {
     if (!allAssets.length) { alert('No assets to export!'); return; }
 
-    const headers = ['Asset ID', 'Name', 'Category', 'Sub Category', 'Status', 'Condition',
+    const headers = ['Asset ID', 'Name', 'Full Name', 'Category', 'Sub Category', 'Status', 'Condition',
         'Location', 'Assigned To', 'Purchase Date', 'Purchase Price', 'Current Value',
         'Vendor', 'Serial Number', 'Warranty Expiry'];
 
     const rows = allAssets.map(a => [
-        a.assetId, `"${a.name}"`, a.categoryName || '', a.subCategory || '',
+        a.assetId, `"${a.name}"`, `"${a.fullName || ''}"`, a.categoryName || '', a.subCategory || '',
         a.status, a.condition || '',
         `"${a.location || ''}"`, a.assignedToName || 'Unassigned',
         a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : '',
@@ -1508,7 +1509,7 @@ function exportAssetsCSV() {
 
 function exportAssetsTemplateCSV() {
     const headers = [
-        'Name', 'Description', 'Category', 'Sub Category', 'Status',
+        'Name', 'Full Name', 'Description', 'Category', 'Sub Category', 'Status',
         'Condition', 'Location', 'Assigned To', 'Purchase Date',
         'Purchase Price', 'Current Value', 'Vendor', 'Serial Number',
         'Asset Tag', 'Warranty Expiry'
