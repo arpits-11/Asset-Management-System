@@ -3110,6 +3110,7 @@ showApp = function () {
         if (addEq) addEq.style.display = 'none';
     } else {
         loadEquipmentMaster();
+        loadLocations();
     }
 };
 
