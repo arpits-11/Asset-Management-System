@@ -55,6 +55,7 @@ const assetSchema = new mongoose.Schema({
     description: { type: String, default: '' },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     categoryName: { type: String, default: '' },
+    fullName: { type: String, default: '' },
     subCategory: { type: String, default: '' },
     status: { type: String, enum: ['active', 'in-repair', 'disposed', 'lost', 'reserved'], default: 'active' },
     condition: { type: String, enum: ['excellent', 'good', 'fair', 'poor'], default: 'good' },
