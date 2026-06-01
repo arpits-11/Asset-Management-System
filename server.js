@@ -257,6 +257,12 @@ const equipmentMasterSchema = new mongoose.Schema({
 }, { timestamps: true });
 const EquipmentMaster = mongoose.model('EquipmentMaster', equipmentMasterSchema);
 
+const locationSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: { type: String }
+}, { timestamps: true });
+const Location = mongoose.model('Location', locationSchema);
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -621,6 +627,28 @@ app.delete('/api/categories/:id', authMiddleware, requireRole('admin'), async (r
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
+});
+
+app.get('/api/locations', authMiddleware, async (req, res) => {
+    try {
+        const locs = await Location.find().sort({ name: 1 });
+        res.json(locs);
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.post('/api/locations', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const loc = new Location(req.body);
+        await loc.save();
+        res.status(201).json(loc);
+    } catch (err) { res.status(500).json({ message: 'Failed to save location' }); }
+});
+
+app.delete('/api/locations/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        await Location.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Location deleted' });
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
 app.get('/api/assets', authMiddleware, async (req, res) => {
