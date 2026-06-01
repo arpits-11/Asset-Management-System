@@ -983,12 +983,6 @@ function filterAssets() {
     renderAssets(filtered);
 }
 
-const locSelect = document.getElementById('a-location');
-if (locSelect) {
-    locSelect.innerHTML = '<option value="">Select location...</option>' +
-        allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
-}
-
 // Asset modal
 async function openAssetModal() {
     editingAssetId = null;
@@ -1013,6 +1007,12 @@ async function openAssetModal() {
     populateCategoryDropdowns();
     await populateUserDropdown('a-assigned-to', '');
 
+   const locSelect = document.getElementById('a-location');
+    if (locSelect) {
+        locSelect.innerHTML = '<option value="">Select location...</option>' +
+            allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+    }
+
     document.getElementById('asset-modal').classList.add('open');
 }
 
@@ -1035,6 +1035,13 @@ async function openEditAssetModal(assetId) {
     document.getElementById('a-serial').value = asset.serialNumber || '';
     document.getElementById('a-tag').value = asset.assetTag || '';
     document.getElementById('a-location').value = asset.location || '';
+
+    const locSelect = document.getElementById('a-location');
+    if (locSelect) {
+        locSelect.innerHTML = '<option value="">Select location...</option>' +
+            allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+    }
+    // document.getElementById('a-location').value = asset.location || '';
 
     if (asset.purchaseDate)
         document.getElementById('a-purchase-date').value = new Date(asset.purchaseDate).toISOString().split('T')[0];
