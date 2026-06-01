@@ -923,7 +923,8 @@ function renderAssets(assets) {
             </td>
             <td>
                 <div style="font-weight:500;">${a.name}</div>
-                ${a.subCategory ? `<div style="font-size:12px; color:#94a3b8;">${a.subCategory}</div>` : ''}
+${a.fullName ? `<div style="font-size:12px; color:#94a3b8;">${a.fullName}</div>` : ''}
+${a.subCategory ? `<div style="font-size:11px; color:#64748b;">${a.subCategory}</div>` : ''}
             </td>
             <td>
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -1007,7 +1008,7 @@ async function openAssetModal() {
     populateCategoryDropdowns();
     await populateUserDropdown('a-assigned-to', '');
 
-   const locSelect = document.getElementById('a-location');
+    const locSelect = document.getElementById('a-location');
     if (locSelect) {
         locSelect.innerHTML = '<option value="">Select location...</option>' +
             allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
@@ -1025,6 +1026,7 @@ async function openEditAssetModal(assetId) {
     document.getElementById('save-asset-btn').textContent = 'Save Changes';
 
     document.getElementById('a-name').value = asset.name || '';
+    document.getElementById('a-fullname').value = asset.fullName || '';
     document.getElementById('a-subcategory').value = asset.subCategory || '';
     document.getElementById('a-description').value = asset.description || '';
     document.getElementById('a-status').value = asset.status || 'active';
@@ -1072,6 +1074,7 @@ async function saveAsset(forceCreate = false) {
 
     const body = {
         name: document.getElementById('a-name').value.trim(),
+        fullName: document.getElementById('a-fullname').value.trim(),
         description: document.getElementById('a-description').value.trim(),
         categoryId: document.getElementById('a-category').value,
         categoryName: catName,
