@@ -922,9 +922,9 @@ function renderAssets(assets) {
                 </span>
             </td>
             <td>
-                <div style="font-weight:500;">${a.name}</div>
-${a.fullName ? `<div style="font-size:12px; color:#94a3b8;">${a.fullName}</div>` : ''}
-${a.subCategory ? `<div style="font-size:11px; color:#64748b;">${a.subCategory}</div>` : ''}
+                <div style="font-weight:600; font-size:13px;">${a.name}</div>
+                ${a.fullName ? `<div style="font-size:12px; color:#94a3b8; margin-top:2px;">${a.fullName}</div>` : ''}
+                ${a.subCategory ? `<div style="font-size:11px; color:#64748b; margin-top:1px;">${a.subCategory}</div>` : ''}
             </td>
             <td>
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -1036,14 +1036,12 @@ async function openEditAssetModal(assetId) {
     document.getElementById('a-vendor').value = asset.vendorName || '';
     document.getElementById('a-serial').value = asset.serialNumber || '';
     document.getElementById('a-tag').value = asset.assetTag || '';
-    document.getElementById('a-location').value = asset.location || '';
-
     const locSelect = document.getElementById('a-location');
     if (locSelect) {
         locSelect.innerHTML = '<option value="">Select location...</option>' +
             allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+        locSelect.value = asset.location || '';
     }
-    // document.getElementById('a-location').value = asset.location || '';
 
     if (asset.purchaseDate)
         document.getElementById('a-purchase-date').value = new Date(asset.purchaseDate).toISOString().split('T')[0];
@@ -1164,6 +1162,9 @@ async function openDetailModal(assetId) {
         document.getElementById('detail-asset-name').textContent = viewingAsset.name;
         document.getElementById('detail-asset-id').textContent = viewingAsset.assetId;
 
+        const detailSubName = document.getElementById('detail-asset-subname');
+        if (detailSubName) detailSubName.textContent = viewingAsset.fullName || '';
+
         document.getElementById('detail-badges').innerHTML = `
             <span class="badge ${statusColors[viewingAsset.status]}">${viewingAsset.status}</span>
             <span class="badge ${conditionColors[viewingAsset.condition]}">${viewingAsset.condition}</span>
@@ -1173,6 +1174,7 @@ async function openDetailModal(assetId) {
 
         document.getElementById('detail-info-grid').innerHTML = [
             ['Asset ID', viewingAsset.assetId],
+            ['Full Name', viewingAsset.fullName || '—'],
             ['Serial No.', viewingAsset.serialNumber || '—'],
             ['Asset Tag', viewingAsset.assetTag || '—'],
             ['Location', viewingAsset.location || '—'],
