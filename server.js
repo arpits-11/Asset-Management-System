@@ -1276,6 +1276,7 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                 const asset = new Asset({
                     assetId,
                     name: row.name.trim(),
+                    fullName: row.fullName || '',
                     description: row.description || '',
                     categoryName: row.category || '',
                     subCategory: row.subCategory || '',
