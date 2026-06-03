@@ -923,7 +923,6 @@ function renderAssets(assets) {
             </td>
             <td>
                 <div style="font-weight:600; font-size:13px;">${a.name}</div>
-                ${a.fullName ? `<div style="font-size:12px; color:#94a3b8; margin-top:2px;">${a.fullName}</div>` : ''}
                 ${a.subCategory ? `<div style="font-size:11px; color:#64748b; margin-top:1px;">${a.subCategory}</div>` : ''}
             </td>
             <td>
@@ -1026,7 +1025,6 @@ async function openEditAssetModal(assetId) {
     document.getElementById('save-asset-btn').textContent = 'Save Changes';
 
     document.getElementById('a-name').value = asset.name || '';
-    document.getElementById('a-fullname').value = asset.fullName || '';
     document.getElementById('a-subcategory').value = asset.subCategory || '';
     document.getElementById('a-description').value = asset.description || '';
     document.getElementById('a-status').value = asset.status || 'active';
@@ -1070,9 +1068,16 @@ async function saveAsset(forceCreate = false) {
     const assignEl = document.getElementById('a-assigned-to');
     const assignedToName = assignEl.options[assignEl.selectedIndex]?.text || '';
 
+    const masterSelect = document.getElementById('a-master-select');
+    let productCode = '';
+    if (masterSelect && masterSelect.value) {
+        const eq = allEquipmentMaster.find(e => e._id === masterSelect.value);
+        if (eq) productCode = eq.productCode;
+    }
+
     const body = {
         name: document.getElementById('a-name').value.trim(),
-        fullName: document.getElementById('a-fullname').value.trim(),
+        productCode: productCode,
         description: document.getElementById('a-description').value.trim(),
         categoryId: document.getElementById('a-category').value,
         categoryName: catName,
@@ -1162,9 +1167,6 @@ async function openDetailModal(assetId) {
         document.getElementById('detail-asset-name').textContent = viewingAsset.name;
         document.getElementById('detail-asset-id').textContent = viewingAsset.assetId;
 
-        const detailSubName = document.getElementById('detail-asset-subname');
-        if (detailSubName) detailSubName.textContent = viewingAsset.fullName || '';
-
         document.getElementById('detail-badges').innerHTML = `
             <span class="badge ${statusColors[viewingAsset.status]}">${viewingAsset.status}</span>
             <span class="badge ${conditionColors[viewingAsset.condition]}">${viewingAsset.condition}</span>
@@ -1174,7 +1176,6 @@ async function openDetailModal(assetId) {
 
         document.getElementById('detail-info-grid').innerHTML = [
             ['Asset ID', viewingAsset.assetId],
-            ['Full Name', viewingAsset.fullName || '—'],
             ['Serial No.', viewingAsset.serialNumber || '—'],
             ['Asset Tag', viewingAsset.assetTag || '—'],
             ['Location', viewingAsset.location || '—'],
@@ -1454,22 +1455,23 @@ function handleCSVFile(event) {
 
             headers.forEach((header, index) => {
                 const val = cols[index] || '';
-                if (header === 'Name') obj.name = val;
-                if (header === 'Full Name') obj.fullName = val;
-                if (header === 'Description') obj.description = val;
-                if (header === 'Category') obj.category = val;
-                if (header === 'Sub Category') obj.subCategory = val;
-                if (header === 'Status') obj.status = val;
-                if (header === 'Condition') obj.condition = val;
-                if (header === 'Location') obj.location = val;
-                if (header === 'Assigned To') obj.assignedTo = val;
-                if (header === 'Purchase Date') obj.purchaseDate = safeDate(val);
-                if (header === 'Purchase Price') obj.purchasePrice = val;
-                if (header === 'Current Value') obj.currentValue = val;
-                if (header === 'Vendor') obj.vendor = val;
-                if (header === 'Serial Number') obj.serialNumber = val;
-                if (header === 'Asset Tag') obj.assetTag = val;
-                if (header === 'Warranty Expiry') obj.warrantyExpiry = safeDate(val);
+                const cleanHeader = header.trim();
+
+                if (cleanHeader === 'Name' || cleanHeader === 'Device Type') obj.name = val;
+                if (cleanHeader === 'Description') obj.description = val;
+                if (cleanHeader === 'Category') obj.category = val;
+                if (cleanHeader === 'Sub Category' || cleanHeader === 'Model') obj.subCategory = val;
+                if (cleanHeader === 'Status') obj.status = val;
+                if (cleanHeader === 'Condition') obj.condition = val;
+                if (cleanHeader === 'Location' || cleanHeader === 'Office') obj.location = val;
+                if (cleanHeader === 'Assigned To') obj.assignedTo = val;
+                if (cleanHeader === 'Purchase Date') obj.purchaseDate = safeDate(val);
+                if (cleanHeader === 'Purchase Price' || cleanHeader === 'Original Cost') obj.purchasePrice = val;
+                if (cleanHeader === 'Current Value' || cleanHeader === 'Book Value') obj.currentValue = val;
+                if (cleanHeader === 'Vendor' || cleanHeader === 'Make') obj.vendor = val;
+                if (cleanHeader === 'SerialNumber' || cleanHeader === 'Serial Number' || cleanHeader === 'Serial No') obj.serialNumber = val;
+                if (cleanHeader === 'Asset Tag') obj.assetTag = val;
+                if (cleanHeader === 'Warranty Expiry' || cleanHeader === 'Warranty End') obj.warrantyExpiry = safeDate(val);
             });
             jsonData.push(obj);
         }
@@ -1485,12 +1487,12 @@ function handleCSVFile(event) {
 function exportAssetsCSV() {
     if (!allAssets.length) { alert('No assets to export!'); return; }
 
-    const headers = ['Asset ID', 'Name', 'Full Name', 'Category', 'Sub Category', 'Status', 'Condition',
+    const headers = ['Asset ID', 'Name', 'Category', 'Sub Category', 'Status', 'Condition',
         'Location', 'Assigned To', 'Purchase Date', 'Purchase Price', 'Current Value',
         'Vendor', 'Serial Number', 'Warranty Expiry'];
 
     const rows = allAssets.map(a => [
-        a.assetId, `"${a.name}"`, `"${a.fullName || ''}"`, a.categoryName || '', a.subCategory || '',
+        a.assetId, `"${a.name}"`, a.categoryName || '', a.subCategory || '',
         a.status, a.condition || '',
         `"${a.location || ''}"`, a.assignedToName || 'Unassigned',
         a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : '',
@@ -1511,7 +1513,7 @@ function exportAssetsCSV() {
 
 function exportAssetsTemplateCSV() {
     const headers = [
-        'Name', 'Full Name', 'Description', 'Category', 'Sub Category', 'Status',
+        'Name', 'Description', 'Category', 'Sub Category', 'Status',
         'Condition', 'Location', 'Assigned To', 'Purchase Date',
         'Purchase Price', 'Current Value', 'Vendor', 'Serial Number',
         'Asset Tag', 'Warranty Expiry'
@@ -1530,19 +1532,6 @@ function exportAssetsTemplateCSV() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 }
-
-// const _origLoadDashboard = loadDashboard;
-// loadDashboard = async function () {
-//     await _origLoadDashboard();
-//     try {
-//         const res = await fetch(`${BASE_URL}/api/dashboard/stats`, { headers: authHdrs() });
-//         const data = await res.json();
-//         const tA = document.getElementById('stat-total-assets');
-//         const aA = document.getElementById('stat-active-assets');
-//         if (tA) tA.textContent = data.totalAssets || 0;
-//         if (aA) aA.textContent = data.activeAssets || 0;
-//     } catch (e) { }
-// };
 
 window.addEventListener('load', () => {
     setTimeout(async () => {
@@ -3175,7 +3164,18 @@ function autofillFromMaster() {
     const eq = allEquipmentMaster.find(e => e._id === id);
     if (!eq) return;
 
-    document.getElementById('a-name').value = eq.productCode || '';
+    const deviceTypeMap = {
+        'MON': 'Monitor',
+        'LAP': 'Laptop',
+        'PRN': 'Printer',
+        'CPU': 'CPU',
+        'BIO': 'Biometric',
+        'KBD': 'Keyboard',
+        'SWT': 'Switch',
+        'DTP': 'Desktop'
+    };
+
+    document.getElementById('a-name').value = deviceTypeMap[eq.productCode.toUpperCase()] || eq.productCode || '';
 
     const vendorEl = document.getElementById('a-vendor');
     if (vendorEl) vendorEl.value = eq.manufacturer || '';
