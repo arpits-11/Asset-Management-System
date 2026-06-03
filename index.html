@@ -1097,9 +1097,11 @@
 
                     <div id="page-equipment" class="page">
                         <div
-                            style="display:flex; gap:4px; background:#0f1117; border-radius:8px; padding:4px; margin-bottom:20px; max-width: 600px;">
+                            style="display:flex; gap:4px; background:#0f1117; border-radius:8px; padding:4px; margin-bottom:20px; max-width: 700px;">
                             <button class="detail-tab active" id="eqtab-catalog" onclick="switchEqTab('catalog')">📖
                                 Equipment Catalog</button>
+                            <button class="detail-tab" id="eqtab-devicetypes" onclick="switchEqTab('devicetypes')">📱
+                                Device Types</button>
                             <button class="detail-tab" id="eqtab-categories" onclick="switchEqTab('categories')">🗂️
                                 Categories</button>
                             <button class="detail-tab" id="eqtab-locations" onclick="switchEqTab('locations')">📍
@@ -1113,16 +1115,45 @@
                                     <button class="btn btn-primary btn-sm" onclick="openEqModal()" id="add-eq-btn">+ Add
                                         Equipment</button>
                                 </div>
+                                <p style="padding: 0 16px 8px; color:#94a3b8; font-size:13px;">
+                                    Register OEM manufacturers and their short codes here. Example: Manufacturer = <b>Acer Technologies</b>, Code = <b>ACE</b>.
+                                    The code is used as the manufacturer part of your Asset ID.
+                                </p>
                                 <div class="table-responsive">
                                     <table class="table">
                                         <thead>
                                             <tr>
                                                 <th>Manufacturer (OEM)</th>
-                                                <th>Product Code</th>
+                                                <th>Manufacturer Code</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="equipment-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="eq-content-devicetypes" style="display:none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="card-title">📱 Device Type Master</span>
+                                    <button class="btn btn-primary btn-sm" onclick="openDtModal()" id="add-dt-btn">+ Add Device Type</button>
+                                </div>
+                                <p style="padding: 0 16px 8px; color:#94a3b8; font-size:13px;">
+                                    Register all device types and their short codes here. Example: Short Code = <b>LAP</b>, Full Name = <b>Laptop</b>.
+                                    These codes are used in Asset IDs and CSV imports.
+                                </p>
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Short Code</th>
+                                                <th>Full Name</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="device-types-table-body"></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -1246,14 +1277,14 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group"
                     style="grid-column: 1 / -1; background: rgba(79, 110, 247, 0.1); padding: 12px; border-radius: 8px; border: 1px dashed #4f6ef7;">
-                    <label style="color: #4f6ef7; font-weight: bold;">⚡ Auto-fill from Equipment Master</label>
+                    <label style="color: #4f6ef7; font-weight: bold;">⚡ Select Manufacturer (Equipment Master)</label>
                     <select id="a-master-select" onchange="autofillFromMaster()">
-                        <option value="">-- Custom Asset (Manual Entry) --</option>
+                        <option value="">-- No Manufacturer (Manual Entry) --</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Asset Code *</label>
-                    <input type="text" id="a-name" placeholder="e.g. PRN, LAP, MRK">
+                    <label>Device Type *</label>
+                    <input type="text" id="a-name" placeholder="Select from dropdown or type code (e.g. LAP, PRN)">
                 </div>
                 <div class="form-group">
                     <label>Category *</label>
@@ -1811,23 +1842,48 @@
     </div>
 
     <div class="modal-overlay" id="equipment-modal">
-        <div class="modal" style="max-width: 400px;">
+        <div class="modal" style="max-width: 420px;">
             <div class="modal-header">
                 <span class="modal-title" id="eq-modal-title">Add Equipment</span>
                 <button class="modal-close" onclick="closeEqModal()">✕</button>
             </div>
             <div class="form-group">
                 <label>Manufacturer (OEM) *</label>
-                <input type="text" id="eq-manufacturer" placeholder="e.g., HP, Dell, Cisco">
+                <input type="text" id="eq-manufacturer" placeholder="e.g., HP, Dell, Acer Technologies, Cisco">
             </div>
             <div class="form-group">
-                <label>Product Code *</label>
-                <input type="text" id="eq-code" placeholder="e.g., LAP, MON, PRN">
+                <label>Manufacturer Code * <span style="color:#94a3b8; font-size:12px;">(short code for Asset ID)</span></label>
+                <input type="text" id="eq-code" placeholder="e.g., DEL, ACE, CIS — max 5 chars" maxlength="5"
+                    oninput="this.value=this.value.toUpperCase()">
+                <small style="color:#94a3b8;">This code appears in the Asset ID, e.g. LAP-<b>ACE</b>-0001</small>
             </div>
             <div style="display:flex; gap:8px; margin-top:16px;">
                 <button class="btn btn-outline" onclick="closeEqModal()" style="flex:1;">Cancel</button>
                 <button class="btn btn-primary" onclick="saveEq()" style="flex:2;" id="save-eq-btn">Save
                     Equipment</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="device-type-modal">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <span class="modal-title" id="dt-modal-title">Add Device Type</span>
+                <button class="modal-close" onclick="closeDtModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Short Code * <span style="color:#94a3b8; font-size:12px;">(used in CSV import & Asset ID)</span></label>
+                <input type="text" id="dt-short-code" placeholder="e.g., LAP, MON, PRN, HDD" maxlength="6"
+                    oninput="this.value=this.value.toUpperCase()">
+                <small style="color:#94a3b8;">This code appears in Asset ID as device prefix, e.g. <b>LAP</b>-ACE-0001</small>
+            </div>
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="dt-full-name" placeholder="e.g., Laptop, Monitor, Hard Disk, Printer">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:16px;">
+                <button class="btn btn-outline" onclick="closeDtModal()" style="flex:1;">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDt()" style="flex:2;" id="save-dt-btn">Add Device Type</button>
             </div>
         </div>
     </div>
@@ -1854,7 +1910,7 @@
         </div>
     </div>
 
-    <script src="index.js?v=33"></script>
+    <script src="index.js?v=34"></script>
 </body>
 
 </html>

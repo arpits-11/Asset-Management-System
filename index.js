@@ -1013,6 +1013,16 @@ async function openAssetModal() {
             allLocations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
     }
 
+    if (!allEquipmentMaster.length || !allDeviceTypes.length) {
+        await loadEquipmentMaster();
+    } else {
+        populateEquipmentDropdowns();
+        populateDeviceTypeDropdown();
+    }
+
+    const masterSel = document.getElementById('a-master-select');
+    if (masterSel) masterSel.value = '';
+
     document.getElementById('asset-modal').classList.add('open');
 }
 
@@ -1070,14 +1080,22 @@ async function saveAsset(forceCreate = false) {
 
     const masterSelect = document.getElementById('a-master-select');
     let productCode = '';
+    let equipmentMasterId = '';
     if (masterSelect && masterSelect.value) {
+        equipmentMasterId = masterSelect.value;
         const eq = allEquipmentMaster.find(e => e._id === masterSelect.value);
         if (eq) productCode = eq.productCode;
     }
 
+    const dtSelect = document.getElementById('a-device-type-select');
+    const nameValue = (dtSelect && dtSelect.style.display !== 'none')
+        ? dtSelect.value.trim()
+        : document.getElementById('a-name').value.trim();
+
     const body = {
-        name: document.getElementById('a-name').value.trim(),
+        name: nameValue,
         productCode: productCode,
+        equipmentMasterId: equipmentMasterId,
         description: document.getElementById('a-description').value.trim(),
         categoryId: document.getElementById('a-category').value,
         categoryName: catName,
@@ -1100,7 +1118,7 @@ async function saveAsset(forceCreate = false) {
     clearMsg('asset-modal-error');
     clearMsg('asset-modal-success');
 
-    if (!body.name) { showMsg('asset-modal-error', '⚠️ Asset name is required.'); return; }
+    if (!body.name) { showMsg('asset-modal-error', '⚠️ Device type / Asset name is required.'); return; }
     if (body.name.length < 2) { showMsg('asset-modal-error', '⚠️ Asset name must be at least 2 characters.'); return; }
     if (body.name.length > 100) { showMsg('asset-modal-error', '⚠️ Asset name must be under 100 characters.'); return; }
     if (!body.categoryId) { showMsg('asset-modal-error', '⚠️ Please select a category.'); return; }
@@ -3091,7 +3109,9 @@ document.addEventListener('click', (e) => {
 });
 
 let allEquipmentMaster = [];
+let allDeviceTypes = [];
 let editingEqId = null;
+let editingDtId = null;
 
 const _eqShowPage = showPage;
 showPage = function (page) {
@@ -3108,8 +3128,10 @@ showApp = function () {
     if (currentUser?.role === 'employee') {
         const navEq = document.getElementById('nav-equipment');
         const addEq = document.getElementById('add-eq-btn');
+        const addDt = document.getElementById('add-dt-btn');
         if (navEq) navEq.style.display = 'none';
         if (addEq) addEq.style.display = 'none';
+        if (addDt) addDt.style.display = 'none';
     } else {
         loadEquipmentMaster();
         loadLocations();
@@ -3118,10 +3140,16 @@ showApp = function () {
 
 async function loadEquipmentMaster() {
     try {
-        const res = await fetch(`${BASE_URL}/api/equipment-master`, { headers: authHdrs() });
-        allEquipmentMaster = await res.json();
+        const [eqRes, dtRes] = await Promise.all([
+            fetch(`${BASE_URL}/api/equipment-master`, { headers: authHdrs() }),
+            fetch(`${BASE_URL}/api/device-types`, { headers: authHdrs() })
+        ]);
+        allEquipmentMaster = await eqRes.json();
+        allDeviceTypes = await dtRes.json();
         renderEquipmentMaster(allEquipmentMaster);
+        renderDeviceTypes(allDeviceTypes);
         populateEquipmentDropdowns();
+        populateDeviceTypeDropdown();
     }
     catch (err) { console.error('Equipment load error:', err); }
 }
@@ -3138,7 +3166,8 @@ function renderEquipmentMaster(eqs) {
     tbody.innerHTML = eqs.map(eq => `
         <tr>
             <td>${eq.manufacturer}</td>
-            <td style="font-weight:500;">${eq.productCode}</td>
+            <td style="font-weight:500; font-family:monospace;">${eq.productCode}
+                <span style="font-size:11px;color:#94a3b8;">(manufacturer code)</span></td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
                 <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">✏️</button>
@@ -3151,11 +3180,95 @@ function renderEquipmentMaster(eqs) {
     `).join('');
 }
 
+function renderDeviceTypes(dts) {
+    const tbody = document.getElementById('device-types-table-body');
+    if (!tbody) return;
+    if (!dts.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:40px; color:#94a3b8;">No device types registered yet. Click "+ Add Device Type" to create one.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = dts.map(dt => `
+        <tr>
+            <td style="font-weight:600; font-family:monospace;">${dt.shortCode}</td>
+            <td>${dt.fullName}</td>
+            <td>
+                ${currentUser?.role !== 'employee' ? `
+                <button class="btn btn-outline btn-sm" onclick="openDtModal('${dt._id}')">✏️</button>
+                ` : ''}
+                ${currentUser?.role === 'admin' ? `
+                <button class="btn btn-danger btn-sm" onclick="deleteDt('${dt._id}')">🗑️</button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openDtModal(id = null) {
+    editingDtId = id;
+    document.getElementById('dt-modal-title').textContent = id ? 'Edit Device Type' : 'Add Device Type';
+    document.getElementById('save-dt-btn').textContent = id ? 'Save Changes' : 'Add Device Type';
+    document.getElementById('dt-short-code').value = '';
+    document.getElementById('dt-full-name').value = '';
+    if (id) {
+        const dt = allDeviceTypes.find(d => d._id === id);
+        if (dt) {
+            document.getElementById('dt-short-code').value = dt.shortCode || '';
+            document.getElementById('dt-full-name').value = dt.fullName || '';
+        }
+    }
+    document.getElementById('device-type-modal').classList.add('open');
+}
+
+function closeDtModal() {
+    document.getElementById('device-type-modal').classList.remove('open');
+    editingDtId = null;
+}
+
+async function saveDt() {
+    const shortCode = document.getElementById('dt-short-code').value.trim().toUpperCase();
+    const fullName  = document.getElementById('dt-full-name').value.trim();
+
+    if (!shortCode || !fullName) {
+        alert('⚠️ Both Short Code and Full Name are required.');
+        return;
+    }
+
+    const btn = document.getElementById('save-dt-btn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+
+    try {
+        const url    = editingDtId ? `${BASE_URL}/api/device-types/${editingDtId}` : `${BASE_URL}/api/device-types`;
+        const method = editingDtId ? 'PUT' : 'POST';
+        const res = await fetch(url, { method, headers: authHdrs(), body: JSON.stringify({ shortCode, fullName }) });
+        const data = await res.json();
+        if (res.ok) {
+            closeDtModal();
+            loadEquipmentMaster();
+        } else {
+            alert(data.message || 'Failed to save device type');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Connection error');
+    } finally {
+        btn.textContent = editingDtId ? 'Save Changes' : 'Add Device Type';
+        btn.disabled = false;
+    }
+}
+
+async function deleteDt(id) {
+    if (!confirm('⚠️ Delete this device type?')) return;
+    try {
+        await fetch(`${BASE_URL}/api/device-types/${id}`, { method: 'DELETE', headers: authHdrs() });
+        loadEquipmentMaster();
+    } catch (e) { console.error(e); }
+}
+
 function populateEquipmentDropdowns() {
     const select = document.getElementById('a-master-select');
     if (!select) return;
-    select.innerHTML = '<option value="">-- Custom Asset (Manual Entry) --</option>' +
-        allEquipmentMaster.map(eq => `<option value="${eq._id}">${eq.manufacturer} - ${eq.productCode}</option>`).join('');
+    select.innerHTML = '<option value="">-- No Manufacturer (Manual Entry) --</option>' +
+        allEquipmentMaster.map(eq => `<option value="${eq._id}">${eq.manufacturer} [${eq.productCode}]</option>`).join('');
 }
 
 function autofillFromMaster() {
@@ -3164,21 +3277,32 @@ function autofillFromMaster() {
     const eq = allEquipmentMaster.find(e => e._id === id);
     if (!eq) return;
 
-    const deviceTypeMap = {
-        'MON': 'Monitor',
-        'LAP': 'Laptop',
-        'PRN': 'Printer',
-        'CPU': 'CPU',
-        'BIO': 'Biometric',
-        'KBD': 'Keyboard',
-        'SWT': 'Switch',
-        'DTP': 'Desktop'
-    };
-
-    document.getElementById('a-name').value = deviceTypeMap[eq.productCode.toUpperCase()] || eq.productCode || '';
-
     const vendorEl = document.getElementById('a-vendor');
     if (vendorEl) vendorEl.value = eq.manufacturer || '';
+}
+
+function populateDeviceTypeDropdown() {
+    const nameInput = document.getElementById('a-name');
+    if (!nameInput) return;
+    let dtSelect = document.getElementById('a-device-type-select');
+    if (!allDeviceTypes.length) {
+        if (dtSelect) dtSelect.style.display = 'none';
+        nameInput.style.display = '';
+        return;
+    }
+    if (!dtSelect) {
+        dtSelect = document.createElement('select');
+        dtSelect.id = 'a-device-type-select';
+        dtSelect.style.cssText = nameInput.style.cssText;
+        dtSelect.className = nameInput.className;
+        nameInput.parentNode.insertBefore(dtSelect, nameInput);
+        nameInput.style.display = 'none';
+    }
+    dtSelect.style.display = '';
+    nameInput.style.display = 'none';
+    dtSelect.innerHTML = '<option value="">-- Select Device Type --</option>' +
+        allDeviceTypes.map(dt => `<option value="${dt.shortCode}">${dt.fullName} (${dt.shortCode})</option>`).join('');
+    dtSelect.onchange = () => { nameInput.value = dtSelect.value; };
 }
 
 function openEqModal(id = null) {
