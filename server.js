@@ -94,20 +94,21 @@ const assetHistorySchema = new mongoose.Schema({
 const AssetHistory = mongoose.model('AssetHistory', assetHistorySchema);
 
 async function generateAssetId(categoryCode, productCode) {
-    const cat = (categoryCode || 'AST').toUpperCase().trim();
-    const prod = (productCode || 'GEN').toUpperCase().trim();
-    const prefix = `${cat}-${prod}-`;
+    const cat = (categoryCode || 'AST').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+    const prod = (productCode || 'GEN').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+    const escapedPrefix = prefix.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 
-    const matchingAssets = await Asset.find({ assetId: new RegExp('^' + prefix) }, 'assetId');
+    const matchingAssets = await Asset.find(
+        { assetId: new RegExp('^' + escapedPrefix) },
+        'assetId'
+    );
 
     let highestNum = 0;
     for (const a of matchingAssets) {
         if (a.assetId) {
-            const remainder = a.assetId.replace(prefix, '');
+            const remainder = a.assetId.slice(prefix.length);
             const num = parseInt(remainder, 10);
-            if (!isNaN(num) && num > highestNum) {
-                highestNum = num;
-            }
+            if (!isNaN(num) && num > highestNum) highestNum = num;
         }
     }
 
@@ -263,6 +264,12 @@ const equipmentMasterSchema = new mongoose.Schema({
     productCode: { type: String, required: true }
 }, { timestamps: true });
 const EquipmentMaster = mongoose.model('EquipmentMaster', equipmentMasterSchema);
+
+const deviceTypeSchema = new mongoose.Schema({
+    shortCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    fullName: { type: String, required: true, trim: true }
+}, { timestamps: true });
+const DeviceType = mongoose.model('DeviceType', deviceTypeSchema);
 
 const locationSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -790,22 +797,24 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         }
 
         let prodCode = req.body.productCode || '';
+        if (!prodCode && req.body.equipmentMasterId) {
+            const eq = await EquipmentMaster.findById(req.body.equipmentMasterId);
+            if (eq) prodCode = eq.productCode.toUpperCase();
+        }
         if (!prodCode && vendorName) {
             prodCode = vendorName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
         }
-        if (!prodCode) prodCode = 'AST';
+        if (!prodCode) prodCode = 'GEN';
 
-        const reverseDeviceMap = {
-            'MONITOR': 'MON',
-            'LAPTOP': 'LAP',
-            'PRINTER': 'PRN',
-            'CPU': 'CPU',
-            'BIOMETRIC': 'BIO',
-            'KEYBOARD': 'KBD',
-            'SWITCH': 'SWT',
-            'DESKTOP': 'DTP'
-        };
-        const catCode = reverseDeviceMap[name.trim().toUpperCase()] || name.trim().substring(0, 3).toUpperCase() || 'AST';
+        const nameUpper = name.trim().toUpperCase();
+        let deviceTypeDoc = await DeviceType.findOne({ shortCode: nameUpper });
+        let catCode;
+        if (deviceTypeDoc) {
+            catCode = deviceTypeDoc.shortCode;
+        } else {
+            deviceTypeDoc = await DeviceType.findOne({ fullName: { $regex: `^${name.trim()}$`, $options: 'i' } });
+            catCode = deviceTypeDoc ? deviceTypeDoc.shortCode : name.trim().substring(0, 3).toUpperCase();
+        }
         const assetId = await generateAssetId(catCode, prodCode);
 
         const asset = new Asset({
@@ -1251,78 +1260,103 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
         const user = await User.findById(req.userId);
         const results = { success: 0, failed: 0, errors: [] };
 
-        const allExisting = await Asset.find({}, 'assetId');
-        let highestIdNum = 0;
-        for (const a of allExisting) {
-            if (a.assetId && a.assetId.startsWith('AST-')) {
-                const num = parseInt(a.assetId.replace('AST-', ''), 10);
-                if (!isNaN(num) && num > highestIdNum) highestIdNum = num;
+        const [allDeviceTypes, allEquipment, existingAssetIds] = await Promise.all([
+            DeviceType.find({}, 'shortCode fullName'),
+            EquipmentMaster.find({}, 'manufacturer productCode'),
+            Asset.find({}, 'assetId')
+        ]);
+
+        const dtByShort = {};
+        const dtByFull = {};
+        for (const dt of allDeviceTypes) {
+            dtByShort[dt.shortCode.toUpperCase()] = dt.fullName;
+            dtByFull[dt.fullName.toLowerCase()] = dt.shortCode.toUpperCase();
+        }
+
+        const mfrMap = {};
+        for (const eq of allEquipment) {
+            mfrMap[eq.manufacturer.toLowerCase()] = eq.productCode.toUpperCase();
+        }
+
+        const prefixCounters = {};
+        for (const a of existingAssetIds) {
+            if (!a.assetId) continue;
+            const parts = a.assetId.split('-');
+            if (parts.length >= 3) {
+                const prefix = parts.slice(0, 2).join('-') + '-';
+                const num = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(num)) {
+                    prefixCounters[prefix] = Math.max(prefixCounters[prefix] || 0, num);
+                }
             }
+        }
+
+        function nextAssetId(catCode, prodCode) {
+            const cat = (catCode || 'AST').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const prod = (prodCode || 'GEN').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const prefix = `${cat}-${prod}-`;
+            const next = (prefixCounters[prefix] || 0) + 1;
+            prefixCounters[prefix] = next;
+            return `${prefix}${String(next).padStart(4, '0')}`;
         }
 
         const existingSerials = new Set(
             (await Asset.find({ serialNumber: { $ne: '' }, status: { $ne: 'disposed' } }, 'serialNumber'))
                 .map(a => a.serialNumber.trim().toLowerCase())
         );
-
         const batchSerials = new Set();
 
-        const deviceTypeMap = {
-            'MON': 'Monitor',
-            'LAP': 'Laptop',
-            'PRN': 'Printer',
-            'CPU': 'CPU',
-            'BIO': 'Biometric',
-            'KBD': 'Keyboard',
-            'SWT': 'Switch',
-            'DTP': 'Desktop'
-        };
+        const toInsert = [];
 
         for (const row of assets) {
             try {
                 if (!row.name || !row.name.trim()) {
                     results.failed++;
-                    results.errors.push(`Row skipped - missing name/device type`);
+                    results.errors.push('Row skipped — missing name/device type');
                     continue;
                 }
 
-                const rowName = row.name.trim(); // Code from CSV (e.g. MON, LAP)
+                const rowName = row.name.trim();
                 const rowSerial = (row.serialNumber || '').trim();
                 const serialKey = rowSerial.toLowerCase();
 
                 if (rowSerial) {
                     if (existingSerials.has(serialKey)) {
                         results.failed++;
-                        results.errors.push(`"${rowName}" skipped — Duplicate Serial Number (${rowSerial}) already exists in database`);
+                        results.errors.push(`"${rowName}" skipped — Duplicate Serial (${rowSerial}) already in database`);
                         continue;
                     }
                     if (batchSerials.has(serialKey)) {
                         results.failed++;
-                        results.errors.push(`"${rowName}" skipped — Duplicate Serial Number (${rowSerial}) appears multiple times in import file`);
+                        results.errors.push(`"${rowName}" skipped — Duplicate Serial (${rowSerial}) in import file`);
                         continue;
                     }
                 }
 
-                const finalDeviceName = deviceTypeMap[rowName.toUpperCase()] || rowName;
+                const codeUpper = rowName.toUpperCase();
+                let catCode, finalDeviceName;
+                if (dtByShort[codeUpper]) {
+                    catCode = codeUpper;
+                    finalDeviceName = dtByShort[codeUpper];
+                } else if (dtByFull[rowName.toLowerCase()]) {
+                    catCode = dtByFull[rowName.toLowerCase()];
+                    finalDeviceName = rowName;
+                } else {
+                    catCode = rowName.substring(0, 3).toUpperCase();
+                    finalDeviceName = rowName;
+                }
 
                 const rowVendor = (row.vendor || '').trim();
                 let prodCode = '';
                 if (rowVendor) {
-                    const eqMaster = await EquipmentMaster.findOne({
-                        manufacturer: { $regex: `^${rowVendor}$`, $options: 'i' }
-                    });
-                    if (eqMaster && eqMaster.productCode) {
-                        prodCode = eqMaster.productCode.toUpperCase();
-                    } else {
-                        prodCode = rowVendor.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
-                    }
+                    prodCode = mfrMap[rowVendor.toLowerCase()]
+                        || rowVendor.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
                 }
-                if (!prodCode) prodCode = 'AST';
+                if (!prodCode) prodCode = 'GEN';
 
-                const catCode = rowName.toUpperCase();
-                const assetId = await generateAssetId(catCode, prodCode);
+                const assetId = nextAssetId(catCode, prodCode);
 
-                const asset = new Asset({
+                toInsert.push({
                     assetId,
                     name: finalDeviceName,
                     description: row.description || '',
@@ -1336,26 +1370,41 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     purchasePrice: parseFloat(row.purchasePrice) || 0,
                     currentValue: parseFloat(row.currentValue) || parseFloat(row.purchasePrice) || 0,
                     vendorName: rowVendor,
-                    serialNumber: row.serialNumber || '',
+                    serialNumber: rowSerial,
                     assetTag: row.assetTag || '',
                     warrantyExpiry: row.warrantyExpiry ? new Date(row.warrantyExpiry) : null,
                     location: row.location || '',
                     assignedToName: row.assignedTo || '',
                     createdBy: req.userId
                 });
-                await asset.save();
+
                 if (rowSerial) {
                     batchSerials.add(serialKey);
                     existingSerials.add(serialKey);
                 }
-
                 results.success++;
-            }
-            catch (err) {
+            } catch (err) {
                 results.failed++;
                 results.errors.push(`"${row.name || 'unknown'}" - ${err.message}`);
             }
         }
+
+        if (toInsert.length > 0) {
+            try {
+                await Asset.insertMany(toInsert, { ordered: false });
+            } catch (bulkErr) {
+                if (bulkErr.writeErrors) {
+                    for (const we of bulkErr.writeErrors) {
+                        results.success--;
+                        results.failed++;
+                        results.errors.push(`Insert error at index ${we.index}: ${we.errmsg}`);
+                    }
+                } else {
+                    throw bulkErr;
+                }
+            }
+        }
+
         await logActivity(req.userId, user.name, 'bulk_import',
             `Imported ${results.success} assets (${results.failed} failed)`);
 
@@ -1929,6 +1978,45 @@ app.delete('/api/equipment-master/:id', authMiddleware, requireRole('admin'), as
     } catch (err) {
         res.status(500).json({ message: 'Failed to delete equipment' });
     }
+});
+
+app.get('/api/device-types', authMiddleware, async (req, res) => {
+    try {
+        const types = await DeviceType.find().sort({ shortCode: 1 });
+        res.json(types);
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.post('/api/device-types', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { shortCode, fullName } = req.body;
+        if (!shortCode || !fullName)
+            return res.status(400).json({ message: 'Short code and full name are required' });
+        const exists = await DeviceType.findOne({ shortCode: shortCode.toUpperCase() });
+        if (exists) return res.status(409).json({ message: `Short code "${shortCode.toUpperCase()}" already exists` });
+        const dt = new DeviceType({ shortCode: shortCode.toUpperCase(), fullName });
+        await dt.save();
+        res.status(201).json({ message: 'Device type added', deviceType: dt });
+    } catch (err) { res.status(500).json({ message: 'Server error', error: err.message }); }
+});
+
+app.put('/api/device-types/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
+    try {
+        const { shortCode, fullName } = req.body;
+        const dt = await DeviceType.findByIdAndUpdate(
+            req.params.id,
+            { shortCode: shortCode?.toUpperCase(), fullName },
+            { new: true }
+        );
+        res.json({ message: 'Device type updated', deviceType: dt });
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.delete('/api/device-types/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        await DeviceType.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Device type deleted' });
+    } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
 
 const PORT = process.env.PORT || 5000;
