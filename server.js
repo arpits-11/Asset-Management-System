@@ -55,7 +55,6 @@ const assetSchema = new mongoose.Schema({
     description: { type: String, default: '' },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     categoryName: { type: String, default: '' },
-    fullName: { type: String, default: '' },
     subCategory: { type: String, default: '' },
     status: { type: String, enum: ['active', 'in-repair', 'disposed', 'lost', 'reserved'], default: 'active' },
     condition: { type: String, enum: ['excellent', 'good', 'fair', 'poor'], default: 'good' },
@@ -94,18 +93,25 @@ const assetHistorySchema = new mongoose.Schema({
 });
 const AssetHistory = mongoose.model('AssetHistory', assetHistorySchema);
 
-async function generateAssetId() {
-    const allAssets = await Asset.find({}, 'assetId');
-    let highestIdNum = 0;
-    for (const a of allAssets) {
-        if (a.assetId && a.assetId.startsWith('AST-')) {
-            const num = parseInt(a.assetId.replace('AST-', ''), 10);
-            if (!isNaN(num) && num > highestIdNum) {
-                highestIdNum = num;
+async function generateAssetId(categoryCode, productCode) {
+    const cat = (categoryCode || 'AST').toUpperCase().trim();
+    const prod = (productCode || 'GEN').toUpperCase().trim();
+    const prefix = `${cat}-${prod}-`;
+
+    const matchingAssets = await Asset.find({ assetId: new RegExp('^' + prefix) }, 'assetId');
+
+    let highestNum = 0;
+    for (const a of matchingAssets) {
+        if (a.assetId) {
+            const remainder = a.assetId.replace(prefix, '');
+            const num = parseInt(remainder, 10);
+            if (!isNaN(num) && num > highestNum) {
+                highestNum = num;
             }
         }
     }
-    return `AST-${String(highestIdNum + 1).padStart(4, '0')}`;
+
+    return `${prefix}${String(highestNum + 1).padStart(4, '0')}`;
 }
 
 const activitySchema = new mongoose.Schema({
@@ -783,8 +789,24 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
             }
         }
 
-        const assetId = await generateAssetId();
-        const user = await User.findById(req.userId);
+        let prodCode = req.body.productCode || '';
+        if (!prodCode && vendorName) {
+            prodCode = vendorName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+        }
+        if (!prodCode) prodCode = 'AST';
+
+        const reverseDeviceMap = {
+            'MONITOR': 'MON',
+            'LAPTOP': 'LAP',
+            'PRINTER': 'PRN',
+            'CPU': 'CPU',
+            'BIOMETRIC': 'BIO',
+            'KEYBOARD': 'KBD',
+            'SWITCH': 'SWT',
+            'DESKTOP': 'DTP'
+        };
+        const catCode = reverseDeviceMap[name.trim().toUpperCase()] || name.trim().substring(0, 3).toUpperCase() || 'AST';
+        const assetId = await generateAssetId(catCode, prodCode);
 
         const asset = new Asset({
             assetId, name, description, categoryId, categoryName, subCategory,
@@ -1245,15 +1267,26 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
 
         const batchSerials = new Set();
 
+        const deviceTypeMap = {
+            'MON': 'Monitor',
+            'LAP': 'Laptop',
+            'PRN': 'Printer',
+            'CPU': 'CPU',
+            'BIO': 'Biometric',
+            'KBD': 'Keyboard',
+            'SWT': 'Switch',
+            'DTP': 'Desktop'
+        };
+
         for (const row of assets) {
             try {
                 if (!row.name || !row.name.trim()) {
                     results.failed++;
-                    results.errors.push(`Row skipped - missing name`);
+                    results.errors.push(`Row skipped - missing name/device type`);
                     continue;
                 }
 
-                const rowName = row.name.trim();
+                const rowName = row.name.trim(); // Code from CSV (e.g. MON, LAP)
                 const rowSerial = (row.serialNumber || '').trim();
                 const serialKey = rowSerial.toLowerCase();
 
@@ -1270,13 +1303,28 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     }
                 }
 
-                highestIdNum++;
-                const assetId = `AST-${String(highestIdNum).padStart(4, '0')}`;
+                const finalDeviceName = deviceTypeMap[rowName.toUpperCase()] || rowName;
+
+                const rowVendor = (row.vendor || '').trim();
+                let prodCode = '';
+                if (rowVendor) {
+                    const eqMaster = await EquipmentMaster.findOne({
+                        manufacturer: { $regex: `^${rowVendor}$`, $options: 'i' }
+                    });
+                    if (eqMaster && eqMaster.productCode) {
+                        prodCode = eqMaster.productCode.toUpperCase();
+                    } else {
+                        prodCode = rowVendor.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+                    }
+                }
+                if (!prodCode) prodCode = 'AST';
+
+                const catCode = rowName.toUpperCase();
+                const assetId = await generateAssetId(catCode, prodCode);
 
                 const asset = new Asset({
                     assetId,
-                    name: row.name.trim(),
-                    fullName: row.fullName || '',
+                    name: finalDeviceName,
                     description: row.description || '',
                     categoryName: row.category || '',
                     subCategory: row.subCategory || '',
@@ -1287,7 +1335,7 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     purchaseDate: row.purchaseDate ? new Date(row.purchaseDate) : null,
                     purchasePrice: parseFloat(row.purchasePrice) || 0,
                     currentValue: parseFloat(row.currentValue) || parseFloat(row.purchasePrice) || 0,
-                    vendorName: row.vendor || '',
+                    vendorName: rowVendor,
                     serialNumber: row.serialNumber || '',
                     assetTag: row.assetTag || '',
                     warrantyExpiry: row.warrantyExpiry ? new Date(row.warrantyExpiry) : null,
