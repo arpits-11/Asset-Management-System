@@ -96,6 +96,7 @@ const AssetHistory = mongoose.model('AssetHistory', assetHistorySchema);
 async function generateAssetId(categoryCode, productCode) {
     const cat = (categoryCode || 'AST').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
     const prod = (productCode || 'GEN').toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+    const prefix = `${cat}-${prod}-`;
     const escapedPrefix = prefix.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 
     const matchingAssets = await Asset.find(
@@ -106,9 +107,11 @@ async function generateAssetId(categoryCode, productCode) {
     let highestNum = 0;
     for (const a of matchingAssets) {
         if (a.assetId) {
-            const remainder = a.assetId.slice(prefix.length);
-            const num = parseInt(remainder, 10);
-            if (!isNaN(num) && num > highestNum) highestNum = num;
+            const parts = a.assetId.split('-');
+            if (parts.length === 3) {
+                const num = parseInt(parts[2], 10);
+                if (!isNaN(num) && num > highestNum) highestNum = num;
+            }
         }
     }
 
@@ -1276,15 +1279,16 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
         const mfrMap = {};
         for (const eq of allEquipment) {
             mfrMap[eq.manufacturer.toLowerCase()] = eq.productCode.toUpperCase();
+            mfrMap[eq.productCode.toLowerCase()] = eq.productCode.toUpperCase();
         }
 
         const prefixCounters = {};
         for (const a of existingAssetIds) {
             if (!a.assetId) continue;
             const parts = a.assetId.split('-');
-            if (parts.length >= 3) {
-                const prefix = parts.slice(0, 2).join('-') + '-';
-                const num = parseInt(parts[parts.length - 1], 10);
+            if (parts.length === 3) {
+                const prefix = `${parts[0]}-${parts[1]}-`;
+                const num = parseInt(parts[2], 10);
                 if (!isNaN(num)) {
                     prefixCounters[prefix] = Math.max(prefixCounters[prefix] || 0, num);
                 }
@@ -1346,7 +1350,11 @@ app.post('/api/assets/bulk-import', authMiddleware, requireRole('admin', 'manage
                     finalDeviceName = rowName;
                 }
 
-                const rowVendor = (row.vendor || '').trim();
+                let rowVendorRaw = (row.vendor || '').trim();
+                if (!rowVendorRaw || rowVendorRaw.includes('/')) {
+                    rowVendorRaw = (row.subCategory || '').trim();
+                }
+                const rowVendor = rowVendorRaw;
                 let prodCode = '';
                 if (rowVendor) {
                     prodCode = mfrMap[rowVendor.toLowerCase()]
@@ -2017,6 +2025,74 @@ app.delete('/api/device-types/:id', authMiddleware, requireRole('admin'), async 
         await DeviceType.findByIdAndDelete(req.params.id);
         res.json({ message: 'Device type deleted' });
     } catch (err) { res.status(500).json({ message: 'Server error' }); }
+});
+
+app.post('/api/admin/renumber-asset-ids', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        const [allDeviceTypes, allEquipment, allAssets] = await Promise.all([
+            DeviceType.find({}, 'shortCode fullName'),
+            EquipmentMaster.find({}, 'manufacturer productCode'),
+            Asset.find({}, 'assetId name vendorName createdAt').sort({ createdAt: 1 })
+        ]);
+
+        const dtByShort = {};
+        const dtByFull = {};
+        for (const dt of allDeviceTypes) {
+            dtByShort[dt.shortCode.toUpperCase()] = dt.shortCode.toUpperCase();
+            dtByFull[dt.fullName.toLowerCase()] = dt.shortCode.toUpperCase();
+        }
+
+        const mfrMap = {};
+        for (const eq of allEquipment) {
+            mfrMap[eq.manufacturer.toLowerCase()] = eq.productCode.toUpperCase();
+            mfrMap[eq.productCode.toLowerCase()] = eq.productCode.toUpperCase();
+        }
+
+        const prefixGroups = {};
+        for (const asset of allAssets) {
+            const nameUpper = (asset.name || '').toUpperCase();
+            const catCode = dtByShort[nameUpper]
+                || dtByFull[(asset.name || '').toLowerCase()]
+                || (asset.name || '').substring(0, 3).toUpperCase();
+
+            const vendor = (asset.vendorName || '').trim();
+            const prodCode = vendor
+                ? (mfrMap[vendor.toLowerCase()] || vendor.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase())
+                : 'GEN';
+
+            const cat = catCode.replace(/[^A-Z0-9]/g, '');
+            const prod = prodCode.replace(/[^A-Z0-9]/g, '');
+            const prefix = `${cat}-${prod}-`;
+
+            if (!prefixGroups[prefix]) prefixGroups[prefix] = [];
+            prefixGroups[prefix].push(asset);
+        }
+
+        const bulkOps = [];
+        for (const [prefix, assets] of Object.entries(prefixGroups)) {
+            assets.forEach((asset, idx) => {
+                const newId = `${prefix}${String(idx + 1).padStart(4, '0')}`;
+                if (asset.assetId !== newId) {
+                    bulkOps.push({
+                        updateOne: {
+                            filter: { _id: asset._id },
+                            update: { $set: { assetId: newId } }
+                        }
+                    });
+                }
+            });
+        }
+
+        if (bulkOps.length > 0) await Asset.bulkWrite(bulkOps);
+
+        res.json({
+            message: `Re-numbering complete. ${bulkOps.length} asset IDs updated.`,
+            updated: bulkOps.length
+        });
+    } catch (err) {
+        console.error('Renumber error:', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 5000;
