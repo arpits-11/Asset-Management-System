@@ -750,7 +750,7 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
     try {
         const user = await User.findById(req.userId);
         if (!user) return res.status(404).json({ message: 'Current authenticated user not found' });
-        
+
         const {
             name, description, categoryId, categoryName, subCategory,
             status, condition, purchaseDate, purchasePrice, currentValue,
@@ -815,16 +815,26 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         const nameUpper = name.trim().toUpperCase();
         let deviceTypeDoc = await DeviceType.findOne({ shortCode: nameUpper });
         let catCode;
+        let finalDeviceName = name.trim();
         if (deviceTypeDoc) {
             catCode = deviceTypeDoc.shortCode;
+            finalDeviceName = deviceTypeDoc.fullName;
         } else {
             deviceTypeDoc = await DeviceType.findOne({ fullName: { $regex: `^${name.trim()}$`, $options: 'i' } });
-            catCode = deviceTypeDoc ? deviceTypeDoc.shortCode : name.trim().substring(0, 3).toUpperCase();
+            if (deviceTypeDoc) {
+                catCode = deviceTypeDoc.shortCode;
+                finalDeviceName = deviceTypeDoc.fullName;
+            } else {
+                catCode = name.trim().substring(0, 3).toUpperCase();
+                finalDeviceName = name.trim();
+            }
         }
         const assetId = await generateAssetId(catCode, prodCode);
 
         const asset = new Asset({
-            assetId, name, description, categoryId, categoryName, subCategory,
+            assetId, 
+            name: finalDeviceName, 
+            description, categoryId, categoryName, subCategory,
             status: status || 'active',
             condition: condition || 'good',
             purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
@@ -844,7 +854,7 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         if (assignedTo) {
             await new AssetHistory({
                 assetId: asset._id,
-                assetName: name,
+                assetName: finalDeviceName,
                 action: 'assigned',
                 fromUser: 'None',
                 toUser: assignedToName,
@@ -855,7 +865,7 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         }
 
         await logActivity(req.userId, user.name, 'asset_created',
-            `Created asset ${assetId}: ${name}`);
+            `Created asset ${assetId}: ${finalDeviceName}`);
 
         res.status(201).json(asset);
     } catch (err) {
