@@ -748,6 +748,9 @@ app.post('/api/assets/check-duplicate', authMiddleware, async (req, res) => {
 
 app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'Current authenticated user not found' });
+        
         const {
             name, description, categoryId, categoryName, subCategory,
             status, condition, purchaseDate, purchasePrice, currentValue,
