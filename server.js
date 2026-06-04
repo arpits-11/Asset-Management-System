@@ -772,46 +772,6 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
             safeCategoryId = new mongoose.Types.ObjectId(categoryId);
         }
 
-        if (serialNumber && serialNumber.trim()) {
-            const existingSerial = await Asset.findOne({
-                serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
-                status: { $ne: 'disposed' }
-            });
-            if (existingSerial) {
-                return res.status(409).json({
-                    message: `Duplicate serial number — asset "${existingSerial.name}" (${existingSerial.assetId}) already has serial number "${serialNumber.trim()}".`,
-                    duplicateType: 'serialNumber',
-                    existingAsset: { id: existingSerial._id, name: existingSerial.name, assetId: existingSerial.assetId }
-                });
-            }
-        }
-
-        if (name && categoryId) {
-            const existingName = await Asset.findOne({
-                name: { $regex: `^${name.trim()}$`, $options: 'i' },
-                categoryId: safeCategoryId,
-                status: { $ne: 'disposed' }
-            });
-            if (existingName && !req.body.forceCreate) {
-                return res.status(409).json({
-                    message: `An asset named "${name.trim()}" already exists in this category (${existingName.assetId}). Click "Save Anyway" to create it as a separate asset.`,
-                    duplicateType: 'name',
-                    existingAsset: { id: existingName._id, name: existingName.name, assetId: existingName.assetId },
-                    canForce: true
-                });
-            }
-        }
-
-        let prodCode = req.body.productCode || '';
-        if (!prodCode && req.body.equipmentMasterId) {
-            const eq = await EquipmentMaster.findById(req.body.equipmentMasterId);
-            if (eq) prodCode = eq.productCode.toUpperCase();
-        }
-        if (!prodCode && vendorName) {
-            prodCode = vendorName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
-        }
-        if (!prodCode) prodCode = 'GEN';
-
         const nameUpper = name.trim().toUpperCase();
         let deviceTypeDoc = await DeviceType.findOne({ shortCode: nameUpper });
         let catCode;
@@ -829,6 +789,49 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
                 finalDeviceName = name.trim();
             }
         }
+
+        if (serialNumber && serialNumber.trim()) {
+            const existingSerial = await Asset.findOne({
+                serialNumber: { $regex: `^${serialNumber.trim()}$`, $options: 'i' },
+                status: { $ne: 'disposed' }
+            });
+            if (existingSerial) {
+                return res.status(409).json({
+                    message: `Duplicate serial number — asset "${existingSerial.name}" (${existingSerial.assetId}) already has serial number "${serialNumber.trim()}".`,
+                    duplicateType: 'serialNumber',
+                    existingAsset: { id: existingSerial._id, name: existingSerial.name, assetId: existingSerial.assetId }
+                });
+            }
+        }
+
+        if (finalDeviceName && categoryId) {
+            const existingName = await Asset.findOne({
+                name: { $regex: `^${finalDeviceName.trim()}$`, $options: 'i' },
+                subCategory: { $regex: `^${(subCategory || '').trim()}$`, $options: 'i' },
+                categoryId: safeCategoryId,
+                status: { $ne: 'disposed' }
+            });
+            if (existingName && !req.body.forceCreate) {
+                return res.status(409).json({
+                    message: `An asset named "${finalDeviceName.trim()}" with manufacturer "${subCategory || 'Same'}" already exists in this category (${existingName.assetId}). Click "Save Anyway" to create it as a separate asset.`,
+                    duplicateType: 'name',
+                    existingAsset: { id: existingName._id, name: existingName.name, assetId: existingName.assetId },
+                    canForce: true
+                });
+            }
+        }
+
+        let prodCode = req.body.productCode || '';
+        if (!prodCode && req.body.equipmentMasterId) {
+            const eq = await EquipmentMaster.findById(req.body.equipmentMasterId);
+            if (eq) prodCode = eq.productCode.toUpperCase();
+        }
+        if (!prodCode && vendorName) {
+            prodCode = vendorName.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+        }
+        if (!prodCode) prodCode = 'GEN';
+
+        
         const assetId = await generateAssetId(catCode, prodCode);
 
         const asset = new Asset({
