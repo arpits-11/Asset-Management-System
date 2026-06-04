@@ -558,7 +558,7 @@
                                             <th style="width: 40px;"><input type="checkbox" id="select-all-assets"
                                                     onchange="toggleAllAssetCheckboxes(this)"></th>
                                             <th>Asset ID</th>
-                                            <th>Name</th>
+                                            <th>Device Type</th>
                                             <th>Category</th>
                                             <th>Status</th>
                                             <th>Condition</th>
@@ -578,26 +578,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!--CATEGORIES PAGE-->
-                    <!-- <div class="page" id="page-categories">
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">🗂️ Asset Categories</span>
-                                <button class="btn btn-primary btn-sm" onclick="openCategoryModal()" id="add-cat-btn">+
-                                    Add Category</button>
-                            </div>
-                            <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">
-                                Define asset categories by type (Tangible/Non-Tangible) and mobility
-                                (Moveable/Non-Moveable).
-                            </p>
-                            <div id="categories-grid"
-                                style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
-                                <div style="color:#94a3b8; text-align:center; padding:40px; grid-column:1/-1;">
-                                    Loading...</div>
-                            </div>
-                        </div>
-                    </div> -->
 
                     <!-- Maintenance -->
                     <div class="page" id="page-maintenance">
@@ -1085,7 +1065,7 @@
                                 <thead>
                                     <tr>
                                         <th>Asset ID</th>
-                                        <th>Name</th>
+                                        <th>Device Type</th>
                                         <th>Audit Status</th>
                                         <th>Action</th>
                                     </tr>
@@ -1116,7 +1096,8 @@
                                         Equipment</button>
                                 </div>
                                 <p style="padding: 0 16px 8px; color:#94a3b8; font-size:13px;">
-                                    Register OEM manufacturers and their short codes here. Example: Manufacturer = <b>Acer Technologies</b>, Code = <b>ACE</b>.
+                                    Register OEM manufacturers and their short codes here. Example: Manufacturer =
+                                    <b>Acer Technologies</b>, Code = <b>ACE</b>.
                                     The code is used as the manufacturer part of your Asset ID.
                                 </p>
                                 <div class="table-responsive">
@@ -1138,10 +1119,17 @@
                             <div class="card">
                                 <div class="card-header">
                                     <span class="card-title">📱 Device Type Master</span>
-                                    <button class="btn btn-primary btn-sm" onclick="openDtModal()" id="add-dt-btn">+ Add Device Type</button>
+                                    <div style="display:flex; gap:8px;">
+                                        <button class="btn btn-primary btn-sm" onclick="openDtModal()" id="add-dt-btn">+
+                                            Add Device Type</button>
+                                        <button class="btn btn-outline btn-sm" onclick="renumberAssetIds()"
+                                            id="renumber-btn" title="Fix all existing asset IDs to be sequential">🔢
+                                            Re-number Asset IDs</button>
+                                    </div>
                                 </div>
                                 <p style="padding: 0 16px 8px; color:#94a3b8; font-size:13px;">
-                                    Register all device types and their short codes here. Example: Short Code = <b>LAP</b>, Full Name = <b>Laptop</b>.
+                                    Register all device types and their short codes here. Example: Short Code =
+                                    <b>LAP</b>, Full Name = <b>Laptop</b>.
                                     These codes are used in Asset IDs and CSV imports.
                                 </p>
                                 <div class="table-responsive">
@@ -1375,7 +1363,7 @@
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <div>
-                    <div class="modal-title" id="detail-asset-name">Asset Name</div>
+                    <div class="modal-title" id="detail-asset-name">Device Type</div>
                     <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="detail-asset-id">AST-0000
                     </div>
                 </div>
@@ -1852,7 +1840,8 @@
                 <input type="text" id="eq-manufacturer" placeholder="e.g., HP, Dell, Acer Technologies, Cisco">
             </div>
             <div class="form-group">
-                <label>Manufacturer Code * <span style="color:#94a3b8; font-size:12px;">(short code for Asset ID)</span></label>
+                <label>Manufacturer Code * <span style="color:#94a3b8; font-size:12px;">(short code for Asset
+                        ID)</span></label>
                 <input type="text" id="eq-code" placeholder="e.g., DEL, ACE, CIS — max 5 chars" maxlength="5"
                     oninput="this.value=this.value.toUpperCase()">
                 <small style="color:#94a3b8;">This code appears in the Asset ID, e.g. LAP-<b>ACE</b>-0001</small>
@@ -1872,10 +1861,12 @@
                 <button class="modal-close" onclick="closeDtModal()">✕</button>
             </div>
             <div class="form-group">
-                <label>Short Code * <span style="color:#94a3b8; font-size:12px;">(used in CSV import & Asset ID)</span></label>
+                <label>Short Code * <span style="color:#94a3b8; font-size:12px;">(used in CSV import & Asset
+                        ID)</span></label>
                 <input type="text" id="dt-short-code" placeholder="e.g., LAP, MON, PRN, HDD" maxlength="6"
                     oninput="this.value=this.value.toUpperCase()">
-                <small style="color:#94a3b8;">This code appears in Asset ID as device prefix, e.g. <b>LAP</b>-ACE-0001</small>
+                <small style="color:#94a3b8;">This code appears in Asset ID as device prefix, e.g.
+                    <b>LAP</b>-ACE-0001</small>
             </div>
             <div class="form-group">
                 <label>Full Name *</label>
@@ -1883,7 +1874,8 @@
             </div>
             <div style="display:flex; gap:8px; margin-top:16px;">
                 <button class="btn btn-outline" onclick="closeDtModal()" style="flex:1;">Cancel</button>
-                <button class="btn btn-primary" onclick="saveDt()" style="flex:2;" id="save-dt-btn">Add Device Type</button>
+                <button class="btn btn-primary" onclick="saveDt()" style="flex:2;" id="save-dt-btn">Add Device
+                    Type</button>
             </div>
         </div>
     </div>

@@ -1478,7 +1478,8 @@ function handleCSVFile(event) {
                 if (cleanHeader === 'Name' || cleanHeader === 'Device Type') obj.name = val;
                 if (cleanHeader === 'Description') obj.description = val;
                 if (cleanHeader === 'Category') obj.category = val;
-                if (cleanHeader === 'Sub Category' || cleanHeader === 'Model') obj.subCategory = val;
+                if (cleanHeader === 'Sub Category' || cleanHeader === 'Model') { obj.subCategory = val;
+                    if (val && val.trim()) obj.vendor = val.trim(); }
                 if (cleanHeader === 'Status') obj.status = val;
                 if (cleanHeader === 'Condition') obj.condition = val;
                 if (cleanHeader === 'Location' || cleanHeader === 'Office') obj.location = val;
@@ -1486,8 +1487,9 @@ function handleCSVFile(event) {
                 if (cleanHeader === 'Purchase Date') obj.purchaseDate = safeDate(val);
                 if (cleanHeader === 'Purchase Price' || cleanHeader === 'Original Cost') obj.purchasePrice = val;
                 if (cleanHeader === 'Current Value' || cleanHeader === 'Book Value') obj.currentValue = val;
-                if (cleanHeader === 'Vendor' || cleanHeader === 'Make') obj.vendor = val;
-                if (cleanHeader === 'SerialNumber' || cleanHeader === 'Serial Number' || cleanHeader === 'Serial No') obj.serialNumber = val;
+                if (cleanHeader === 'Vendor' || cleanHeader === 'Make') {
+                    if (val && !val.includes('/') && !obj.vendor) obj.vendor = val.trim(); }
+                if (cleanHeader === 'Serial Number' || cleanHeader === 'SerialNumber' || cleanHeader === 'Serial No') obj.serialNumber = val;
                 if (cleanHeader === 'Asset Tag') obj.assetTag = val;
                 if (cleanHeader === 'Warranty Expiry' || cleanHeader === 'Warranty End') obj.warrantyExpiry = safeDate(val);
             });
@@ -1505,7 +1507,7 @@ function handleCSVFile(event) {
 function exportAssetsCSV() {
     if (!allAssets.length) { alert('No assets to export!'); return; }
 
-    const headers = ['Asset ID', 'Name', 'Category', 'Sub Category', 'Status', 'Condition',
+    const headers = ['Asset ID', 'Device Type', 'Category', 'Sub Category', 'Status', 'Condition',
         'Location', 'Assigned To', 'Purchase Date', 'Purchase Price', 'Current Value',
         'Vendor', 'Serial Number', 'Warranty Expiry'];
 
@@ -3262,6 +3264,37 @@ async function deleteDt(id) {
         await fetch(`${BASE_URL}/api/device-types/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadEquipmentMaster();
     } catch (e) { console.error(e); }
+}
+
+async function renumberAssetIds() {
+    if (!confirm(
+        '⚠️ Re-number ALL Asset IDs?\n\n' +
+        'This will reassign sequential numbers (0001, 0002...) to all existing assets grouped by their device type and manufacturer.\n\n' +
+        'This fixes old assets that have random or incorrect numbers.\n\n' +
+        'Proceed?'
+    )) return;
+
+    const btn = document.getElementById('renumber-btn');
+    if (btn) { btn.textContent = '⏳ Re-numbering...'; btn.disabled = true; }
+
+    try {
+        const res = await fetch(`${BASE_URL}/api/admin/renumber-asset-ids`, {
+            method: 'POST',
+            headers: authHdrs()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(`✅ ${data.message}`);
+            loadAssets();
+        } else {
+            alert('❌ ' + (data.message || 'Failed to renumber'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Connection error');
+    } finally {
+        if (btn) { btn.textContent = '🔢 Re-number Asset IDs'; btn.disabled = false; }
+    }
 }
 
 function populateEquipmentDropdowns() {
