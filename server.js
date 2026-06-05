@@ -673,8 +673,7 @@ app.get('/api/assets', authMiddleware, async (req, res) => {
         const { status, category, assignedTo, search } = req.query;
         let query = {};
 
-        const requestingUser = await User.findById(req.userId).select('role');
-        if (requestingUser?.role === 'employee') {
+        if (req.userRole === 'employee') {
             query.assignedTo = req.userId;
         } else {
             if (assignedTo) query.assignedTo = assignedTo;
@@ -682,7 +681,6 @@ app.get('/api/assets', authMiddleware, async (req, res) => {
 
         if (status) query.status = status;
         if (category) query.categoryId = category;
-        if (assignedTo) query.assignedTo = assignedTo;
         if (search) query.$or = [
             { name: { $regex: search, $options: 'i' } },
             { assetId: { $regex: search, $options: 'i' } },
@@ -1016,7 +1014,7 @@ app.put('/api/assets/:id/assign', authMiddleware, requireRole('admin', 'manager'
 app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
     try {
         const requestingUser = await User.findById(req.userId).select('role');
-        const baseFilter = requestingUser?.role === 'employee'
+        const baseFilter = req.userRole === 'employee'
             ? { assignedTo: req.userId }
             : {};
 
@@ -1094,7 +1092,7 @@ app.get('/api/maintenance', authMiddleware, async (req, res) => {
         if (assetId) query.assetId = assetId;
 
         const requestingUser = await User.findById(req.userId).select('role');
-        if (requestingUser?.role === 'employee') {
+        if (req.userRole === 'employee') {
             const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
             query.assetId = { $in: myAssets.map(a => a._id) };
         }
@@ -1112,7 +1110,7 @@ app.get('/api/maintenance/stats', authMiddleware, async (req, res) => {
     try {
         const requestingUser = await User.findById(req.userId).select('role');
         let baseFilter = {};
-        if (requestingUser?.role === 'employee') {
+        if (req.userRole === 'employee') {
             const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
             baseFilter = { assetId: { $in: myAssets.map(a => a._id) } };
         }
@@ -1250,7 +1248,7 @@ app.get('/api/maintenance/alerts', authMiddleware, async (req, res) => {
         const requestingUser = await User.findById(req.userId).select('role');
         let assetFilter = {};
         let maintAssetFilter = {};
-        if (requestingUser?.role === 'employee') {
+        if (req.userRole === 'employee') {
             const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
             const myAssetIds = myAssets.map(a => a._id);
             maintAssetFilter = { assetId: { $in: myAssetIds } };
