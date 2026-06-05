@@ -1015,18 +1015,25 @@ app.put('/api/assets/:id/assign', authMiddleware, requireRole('admin', 'manager'
 
 app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
     try {
-        const total = await Asset.countDocuments();
-        const active = await Asset.countDocuments({ status: 'active' });
-        const inRepair = await Asset.countDocuments({ status: 'in-repair' });
-        const disposed = await Asset.countDocuments({ status: 'disposed' });
-        const lost = await Asset.countDocuments({ status: 'lost' });
-        const assigned = await Asset.countDocuments({ assignedTo: { $ne: null } });
+        const requestingUser = await User.findById(req.userId).select('role');
+        const baseFilter = requestingUser?.role === 'employee'
+            ? { assignedTo: req.userId }
+            : {};
+
+        const total = await Asset.countDocuments(baseFilter);
+        const active = await Asset.countDocuments({ ...baseFilter, status: 'active' });
+        const inRepair = await Asset.countDocuments({ ...baseFilter, status: 'in-repair' });
+        const disposed = await Asset.countDocuments({ ...baseFilter, status: 'disposed' });
+        const lost = await Asset.countDocuments({ ...baseFilter, status: 'lost' });
+        const assigned = await Asset.countDocuments({ ...baseFilter, assignedTo: { $ne: null } });
 
         const totalValue = await Asset.aggregate([
+            { $match: baseFilter },
             { $group: { _id: null, total: { $sum: '$currentValue' } } }
         ]);
 
         const byCategory = await Asset.aggregate([
+            { $match: baseFilter },
             { $group: { _id: '$categoryName', count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 5 }
@@ -1103,23 +1110,32 @@ app.get('/api/maintenance', authMiddleware, async (req, res) => {
 
 app.get('/api/maintenance/stats', authMiddleware, async (req, res) => {
     try {
-        const total = await Maintenance.countDocuments();
-        const pending = await Maintenance.countDocuments({ status: 'pending' });
-        const inProgress = await Maintenance.countDocuments({ status: 'in-progress' });
-        const completed = await Maintenance.countDocuments({ status: 'completed' });
+        const requestingUser = await User.findById(req.userId).select('role');
+        let baseFilter = {};
+        if (requestingUser?.role === 'employee') {
+            const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
+            baseFilter = { assetId: { $in: myAssets.map(a => a._id) } };
+        }
+
+        const total = await Maintenance.countDocuments(baseFilter);
+        const pending = await Maintenance.countDocuments({ ...baseFilter, status: 'pending' });
+        const inProgress = await Maintenance.countDocuments({ ...baseFilter, status: 'in-progress' });
+        const completed = await Maintenance.countDocuments({ ...baseFilter, status: 'completed' });
         const overdue = await Maintenance.countDocuments({
+            ...baseFilter,
             status: { $in: ['pending', 'in-progress'] },
             scheduledDate: { $lt: new Date() }
         });
 
         const costAgg = await Maintenance.aggregate([
-            { $match: { status: 'completed' } },
+            { $match: { ...baseFilter, status: 'completed' } },
             { $group: { _id: null, total: { $sum: '$cost' } } }
         ]);
 
         const next7 = new Date();
         next7.setDate(next7.getDate() + 7);
         const upcoming = await Maintenance.countDocuments({
+            ...baseFilter,
             status: 'pending',
             scheduledDate: { $gte: new Date(), $lte: next7 }
         });
