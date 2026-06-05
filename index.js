@@ -645,7 +645,7 @@ async function loadActivity() {
 }
 
 setInterval(() => {
-    if (currentUser?.role === 'admin') loadPendingBadge();
+    if (getToken() && currentUser?.role === 'admin') loadPendingBadge();
 }, 60000);
 
 let allAssets = [];
@@ -1172,7 +1172,7 @@ async function deleteAsset(assetId, assetName) {
     if (!confirm(`Permanently delete asset "${assetName}"? This cannot be undone.`)) return;
     try {
         const res = await fetch(`${BASE_URL}/api/assets/${assetId}`, { method: 'DELETE', headers: authHdrs() });
-        if (res.ok) { loadAssets(); loadAssetStats(); }
+        if (res.ok) { loadAssets(); loadAssetStats(); loadDashboard(); }
     } catch (err) { console.log('Delete asset error:', err); }
 }
 
@@ -1405,7 +1405,7 @@ async function importAssetsCSV(jsonData) {
         }
 
         loadAssets();
-        // loadDashboard();
+        loadDashboard();
 
     } catch (err) {
         console.error('Bulk import failed:', err);
@@ -1478,8 +1478,10 @@ function handleCSVFile(event) {
                 if (cleanHeader === 'Name' || cleanHeader === 'Device Type') obj.name = val;
                 if (cleanHeader === 'Description') obj.description = val;
                 if (cleanHeader === 'Category') obj.category = val;
-                if (cleanHeader === 'Sub Category' || cleanHeader === 'Model') { obj.subCategory = val;
-                    if (val && val.trim()) obj.vendor = val.trim(); }
+                if (cleanHeader === 'Sub Category' || cleanHeader === 'Model') {
+                    obj.subCategory = val;
+                    if (val && val.trim()) obj.vendor = val.trim();
+                }
                 if (cleanHeader === 'Status') obj.status = val;
                 if (cleanHeader === 'Condition') obj.condition = val;
                 if (cleanHeader === 'Location' || cleanHeader === 'Office') obj.location = val;
@@ -1488,7 +1490,8 @@ function handleCSVFile(event) {
                 if (cleanHeader === 'Purchase Price' || cleanHeader === 'Original Cost') obj.purchasePrice = val;
                 if (cleanHeader === 'Current Value' || cleanHeader === 'Book Value') obj.currentValue = val;
                 if (cleanHeader === 'Vendor' || cleanHeader === 'Make') {
-                    if (val && !val.includes('/') && !obj.vendor) obj.vendor = val.trim(); }
+                    if (val && !val.includes('/') && !obj.vendor) obj.vendor = val.trim();
+                }
                 if (cleanHeader === 'Serial Number' || cleanHeader === 'SerialNumber' || cleanHeader === 'Serial No') obj.serialNumber = val;
                 if (cleanHeader === 'Asset Tag') obj.assetTag = val;
                 if (cleanHeader === 'Warranty Expiry' || cleanHeader === 'Warranty End') obj.warrantyExpiry = safeDate(val);
@@ -2011,7 +2014,7 @@ function exportReport() {
 }
 
 setInterval(() => {
-    if (getToken()) loadAlertBadge();
+    if (getToken() && currentUser) loadAlertBadge();
 }, 300000);
 
 let allInventoryItems = [];
@@ -2056,6 +2059,8 @@ async function deleteSelectedAssets() {
             document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
+            loadAssetStats();
+            loadDashboard();
             // loadDashboardStats();
         } else {
             alert("Failed to delete assets.");
@@ -2081,6 +2086,8 @@ async function truncateAllAssets() {
             // document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
+            loadAssetStats();
+            loadDashboard();
             // loadDashboardStats();
         } else {
             alert("Failed to truncate assets. Make sure you are logged in as an Admin.");
@@ -2146,6 +2153,7 @@ function renderInventory(items) {
             <td>${stockBadge}</td>
             <td>
                 <div style="display:flex; gap:4px;">
+                <button class="btn btn-outline btn-sm" title="Assign Asset" onclick="openInvAssignModal('${item._id}','${item.name.replace(/'/g, "\\'")}')">🔗 Assign</button>
                     <button class="btn btn-outline btn-sm" title="Stock In" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-in')">📥</button>
                     <button class="btn btn-outline btn-sm" title="Stock Out" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-out')">📤</button>
                     <button class="btn btn-outline btn-sm" title="History" onclick="openItemHistory('${item._id}','${item.name.replace(/'/g, "\\'")}')">📋</button>
@@ -2176,6 +2184,100 @@ function filterInventory() {
         return matchSearch && matchStock;
     });
     renderInventory(filtered);
+}
+
+let invAssignItemId = null;
+let invAssignItemName = '';
+
+async function openInvAssignModal(itemId, itemName) {
+    invAssignItemId = itemId;
+    invAssignItemName = itemName;
+
+    document.getElementById('inv-assign-item-name').textContent = itemName;
+    document.getElementById('inv-assign-user').innerHTML = '<option value="">Loading users...</option>';
+    document.getElementById('inv-assign-asset').innerHTML = '<option value="">Loading assets...</option>';
+    document.getElementById('inv-assign-qty').value = '1';
+    document.getElementById('inv-assign-notes').value = '';
+    document.getElementById('inv-assign-modal').classList.add('open');
+
+    try {
+        const [uRes, aRes] = await Promise.all([
+            fetch(`${BASE_URL}/api/users`, { headers: authHdrs() }),
+            fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() })
+        ]);
+        const users  = await uRes.json();
+        const assets = await aRes.json();
+
+        document.getElementById('inv-assign-user').innerHTML =
+            '<option value="">-- Select User --</option>' +
+            users.filter(u => u.isApproved && u.isActive).map(u =>
+                `<option value="${u._id}">${u.name} (${u.role})</option>`
+            ).join('');
+
+        document.getElementById('inv-assign-asset').innerHTML =
+            '<option value="">-- Select Asset (optional) --</option>' +
+            assets.map(a =>
+                `<option value="${a._id}">[${a.assetId}] ${a.name} — ${a.status}</option>`
+            ).join('');
+    } catch (e) {
+        console.error('Assign modal load error:', e);
+    }
+}
+
+function closeInvAssignModal() {
+    document.getElementById('inv-assign-modal').classList.remove('open');
+    invAssignItemId = null;
+}
+
+async function saveInvAssign() {
+    const userId   = document.getElementById('inv-assign-user').value;
+    const assetId  = document.getElementById('inv-assign-asset').value;
+    const qty      = parseInt(document.getElementById('inv-assign-qty').value) || 1;
+    const notes    = document.getElementById('inv-assign-notes').value.trim();
+
+    if (!userId) { alert('⚠️ Please select a user to assign to.'); return; }
+    if (qty < 1)  { alert('⚠️ Quantity must be at least 1.'); return; }
+
+    const btn = document.getElementById('inv-assign-save-btn');
+    btn.textContent = 'Assigning...'; btn.disabled = true;
+
+    try {
+        const txRes = await fetch(`${BASE_URL}/api/inventory/${invAssignItemId}/transaction`, {
+            method: 'POST',
+            headers: authHdrs(),
+            body: JSON.stringify({
+                type: 'stock-out',
+                quantity: qty,
+                reason: `Assigned to user: ${document.getElementById('inv-assign-user').options[document.getElementById('inv-assign-user').selectedIndex].text}`,
+                reference: notes
+            })
+        });
+
+        if (!txRes.ok) {
+            const err = await txRes.json();
+            alert('❌ ' + (err.message || 'Failed to process stock-out'));
+            return;
+        }
+
+        if (assetId) {
+            const userName = document.getElementById('inv-assign-user').options[document.getElementById('inv-assign-user').selectedIndex].text;
+            await fetch(`${BASE_URL}/api/assets/${assetId}/assign`, {
+                method: 'PUT',
+                headers: authHdrs(),
+                body: JSON.stringify({ assignedTo: userId, assignedToName: userName, notes })
+            });
+        }
+
+        alert(`✅ "${invAssignItemName}" assigned successfully!`);
+        closeInvAssignModal();
+        loadInventory();
+        if (assetId) { loadAssets(); loadAssetStats(); }
+    } catch (e) {
+        console.error(e);
+        alert('Connection error');
+    } finally {
+        btn.textContent = 'Assign'; btn.disabled = false;
+    }
 }
 
 async function loadLowStockAlerts() {
@@ -2968,7 +3070,7 @@ function renderFinanceBreakdown(data) {
 }
 
 setInterval(() => {
-    if (getToken()) loadInsuranceBadge();
+    if (getToken() && currentUser) loadInsuranceBadge();
 }, 300000);
 
 async function loadRequests() {
@@ -3228,7 +3330,7 @@ function closeDtModal() {
 
 async function saveDt() {
     const shortCode = document.getElementById('dt-short-code').value.trim().toUpperCase();
-    const fullName  = document.getElementById('dt-full-name').value.trim();
+    const fullName = document.getElementById('dt-full-name').value.trim();
 
     if (!shortCode || !fullName) {
         alert('⚠️ Both Short Code and Full Name are required.');
@@ -3239,7 +3341,7 @@ async function saveDt() {
     btn.textContent = 'Saving...'; btn.disabled = true;
 
     try {
-        const url    = editingDtId ? `${BASE_URL}/api/device-types/${editingDtId}` : `${BASE_URL}/api/device-types`;
+        const url = editingDtId ? `${BASE_URL}/api/device-types/${editingDtId}` : `${BASE_URL}/api/device-types`;
         const method = editingDtId ? 'PUT' : 'POST';
         const res = await fetch(url, { method, headers: authHdrs(), body: JSON.stringify({ shortCode, fullName }) });
         const data = await res.json();
