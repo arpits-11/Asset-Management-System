@@ -673,6 +673,13 @@ app.get('/api/assets', authMiddleware, async (req, res) => {
         const { status, category, assignedTo, search } = req.query;
         let query = {};
 
+        const requestingUser = await User.findById(req.userId).select('role');
+        if (requestingUser?.role === 'employee') {
+            query.assignedTo = req.userId;
+        } else {
+            if (assignedTo) query.assignedTo = assignedTo;
+        }
+
         if (status) query.status = status;
         if (category) query.categoryId = category;
         if (assignedTo) query.assignedTo = assignedTo;
@@ -831,12 +838,12 @@ app.post('/api/assets', authMiddleware, requireRole('admin', 'manager'), async (
         }
         if (!prodCode) prodCode = 'GEN';
 
-        
+
         const assetId = await generateAssetId(catCode, prodCode);
 
         const asset = new Asset({
-            assetId, 
-            name: finalDeviceName, 
+            assetId,
+            name: finalDeviceName,
             description, categoryId, categoryName, subCategory,
             status: status || 'active',
             condition: condition || 'good',
@@ -1079,6 +1086,12 @@ app.get('/api/maintenance', authMiddleware, async (req, res) => {
         if (type) query.type = type;
         if (assetId) query.assetId = assetId;
 
+        const requestingUser = await User.findById(req.userId).select('role');
+        if (requestingUser?.role === 'employee') {
+            const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
+            query.assetId = { $in: myAssets.map(a => a._id) };
+        }
+
         const records = await Maintenance.find(query)
             .populate('assetId', 'name assetId location')
             .sort({ scheduledDate: 1 });
@@ -1218,17 +1231,30 @@ app.get('/api/maintenance/alerts', authMiddleware, async (req, res) => {
         const next7 = new Date(); next7.setDate(today.getDate() + 7);
         const next30 = new Date(); next30.setDate(today.getDate() + 30);
 
+        const requestingUser = await User.findById(req.userId).select('role');
+        let assetFilter = {};
+        let maintAssetFilter = {};
+        if (requestingUser?.role === 'employee') {
+            const myAssets = await Asset.find({ assignedTo: req.userId }, '_id');
+            const myAssetIds = myAssets.map(a => a._id);
+            maintAssetFilter = { assetId: { $in: myAssetIds } };
+            assetFilter = { _id: { $in: myAssetIds } };
+        }
+
         const overdue = await Maintenance.find({
+            ...maintAssetFilter,
             status: { $in: ['pending', 'in-progress'] },
             scheduledDate: { $lt: today }
         }).populate('assetId', 'name assetId').sort({ scheduledDate: 1 });
 
         const dueSoon = await Maintenance.find({
+            ...maintAssetFilter,
             status: 'pending',
             scheduledDate: { $gte: today, $lte: next7 }
         }).populate('assetId', 'name assetId').sort({ scheduledDate: 1 });
 
         const warranties = await Asset.find({
+            ...assetFilter,
             warrantyExpiry: { $gte: today, $lte: next30 }
         }).select('name assetId warrantyExpiry location');
 
