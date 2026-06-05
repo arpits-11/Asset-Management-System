@@ -91,14 +91,18 @@ function showApp() {
         document.getElementById('admin-nav-section').style.display = 'none';
     }
     if (currentUser.role === 'employee') {
-        document.getElementById('nav-activity').style.display = 'none';
-        document.getElementById('nav-audits').style.display = 'none';
-        document.getElementById('nav-reports').style.display = 'none';
+        const hideNavIds = [
+            'nav-dashboard', 'nav-activity', 'nav-audits', 'nav-reports',
+            'nav-inventory', 'nav-depreciation', 'nav-insurance',
+            'nav-finance', 'nav-equipment'
+        ];
+        hideNavIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        showPage('assets');
+        return;
     }
-    // if (currentUser.role === 'employee') {
-    //     document.getElementById('nav-audits').style.display = 'none';
-    //     document.getElementById('nav-reports').style.display = 'none';
-    // }
 
     showPage('dashboard');
     loadDashboard();
@@ -691,6 +695,14 @@ function formatDate(d) {
 
 const _origShowPage = showPage;
 showPage = function (page) {
+    if (currentUser?.role === 'employee') {
+        const allowed = ['assets', 'maintenance', 'alerts', 'requests'];
+        if (!allowed.includes(page)) {
+            _origShowPage('assets');
+            loadAssets(); loadAssetStats();
+            return;
+        }
+    }
     _origShowPage(page);
     if (page === 'assets') { loadAssets(); loadAssetStats(); }
     if (page === 'categories') { loadCategories(); }
