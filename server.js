@@ -239,6 +239,7 @@ const requestSchema = new mongoose.Schema({
     reason: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     managerNotes: { type: String, default: '' },
+    linkedAssetId: { type: mongoose.Schema.Types.ObjectId, ref: 'Asset', default: null },
     createdAt: { type: Date, default: Date.now }
 });
 const AssetRequest = mongoose.model('AssetRequest', requestSchema);
@@ -559,8 +560,7 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
             .limit(10);
 
         const totalAssets = await Asset.countDocuments();
-        const activeAssets = await Asset.countDocuments({ status: 'active' });
-
+        const activeAssets = await Asset.countDocuments({ status: { $in: ['active', 'assigned'] } });
 
         res.json({
             totalUsers, activeUsers, pendingUsers,
@@ -679,7 +679,16 @@ app.get('/api/assets', authMiddleware, async (req, res) => {
         let query = {};
 
         if (req.userRole === 'employee') {
-            query.assignedTo = req.userId;
+            const approvedReqs = await AssetRequest.find({
+                userId: req.userId,
+                status: 'approved',
+                linkedAssetId: { $ne: null }
+            }, 'linkedAssetId');
+            const linkedIds = approvedReqs.map(r => r.linkedAssetId);
+            query.$or = [
+                { assignedTo: new mongoose.Types.ObjectId(req.userId) },
+                { _id: { $in: linkedIds } }
+            ];
         } else {
             if (assignedTo) query.assignedTo = assignedTo;
         }
@@ -1024,7 +1033,7 @@ app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
 
         const [total, active, inRepair, disposed, lost, assigned, valueAgg, byCategory] = await Promise.all([
             Asset.countDocuments(baseFilter),
-            Asset.countDocuments({ ...baseFilter, status: 'active' }),
+           Asset.countDocuments({ ...baseFilter, status: { $in: ['active', 'assigned'] } }),
             Asset.countDocuments({ ...baseFilter, status: 'in-repair' }),
             Asset.countDocuments({ ...baseFilter, status: 'disposed' }),
             Asset.countDocuments({ ...baseFilter, status: 'lost' }),
@@ -1060,32 +1069,6 @@ app.post('/api/assets/bulk-delete', authMiddleware, requireRole('admin', 'manage
         res.status(500).json({ message: 'Server error' });
     }
 });
-
-// app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
-//     try {
-//         const totalUsers = await User.countDocuments({ isApproved: true });
-//         const activeUsers = await User.countDocuments({ isApproved: true, isActive: true });
-//         const pendingUsers = await User.countDocuments({ isApproved: false });
-//         const adminCount = await User.countDocuments({ role: 'admin', isApproved: true });
-//         const managerCount = await User.countDocuments({ role: 'manager', isApproved: true });
-//         const employeeCount = await User.countDocuments({ role: 'employee', isApproved: true });
-//         const totalAssets = await Asset.countDocuments();
-//         const activeAssets = await Asset.countDocuments({ status: 'active' });
-
-//         const recentActivities = await Activity.find()
-//             .sort({ createdAt: -1 })
-//             .limit(10);
-
-//         res.json({
-//             totalUsers, activeUsers, pendingUsers,
-//             adminCount, managerCount, employeeCount,
-//             totalAssets, activeAssets,
-//             recentActivities
-//         });
-//     } catch (err) {
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// });
 
 app.get('/api/maintenance', authMiddleware, async (req, res) => {
     try {
@@ -1944,12 +1927,29 @@ app.post('/api/requests', authMiddleware, async (req, res) => {
 
 app.put('/api/requests/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
-        const { status, managerNotes } = req.body;
-        const request = await AssetRequest.findByIdAndUpdate(req.params.id, { status, managerNotes }, { new: true });
+        const { status, managerNotes, linkedAssetId } = req.body;
+        const request = await AssetRequest.findByIdAndUpdate(
+            req.params.id,
+            { status, managerNotes, linkedAssetId: linkedAssetId || null },
+            { new: true }
+        );
+
+        if (status === 'approved' && linkedAssetId) {
+            const emp = await User.findById(request.userId).select('name');
+            await Asset.findByIdAndUpdate(linkedAssetId, {
+                assignedTo: request.userId,
+                assignedToName: emp?.name || request.userName,
+                status: 'assigned',
+                assignedDate: new Date(),
+                updatedAt: new Date()
+            });
+        }
 
         const emp = await User.findById(request.userId);
-        if (emp) sendNotification(emp.email, `Asset Request ${status.toUpperCase()}`, `Your request for ${request.itemRequested} was ${status}. Notes: ${managerNotes}`);
-
+        if (emp) sendNotification(emp.email,
+            `Asset Request ${status.toUpperCase()}`,
+            `Your request for ${request.itemRequested} was ${status}. Notes: ${managerNotes}`
+        );
         res.json({ message: `Request ${status}!`, request });
     }
     catch (err) { res.status(500).json({ message: 'Server error' }); }

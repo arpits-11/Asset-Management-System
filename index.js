@@ -3140,12 +3140,59 @@ async function submitRequest() {
 }
 
 async function reviewRequest(id, status) {
-    const notes = prompt(`Enter notes for this ${status} request (optional):`);
-    await fetch(`${BASE_URL}/api/requests/${id}`, {
-        method: 'PUT', headers: authHdrs(),
-        body: JSON.stringify({ status, managerNotes: notes || '' })
-    });
-    loadRequests();
+    if (status === 'approved') {
+        document.getElementById('review-req-id').value = id;
+        document.getElementById('review-req-status').value = status;
+        document.getElementById('review-req-notes').value = '';
+        document.getElementById('review-req-asset').innerHTML = '<option value="">Loading assets...</option>';
+        document.getElementById('review-req-modal').classList.add('open');
+
+        try {
+            const res = await fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() });
+            const assets = await res.json();
+            document.getElementById('review-req-asset').innerHTML =
+                '<option value="">-- No asset to link (approve only) --</option>' +
+                assets.filter(a => a.status !== 'disposed').map(a =>
+                    `<option value="${a._id}">[${a.assetId}] ${a.name} (${a.status})</option>`
+                ).join('');
+        } catch (e) { console.error(e); }
+    } else {
+        const notes = prompt('Enter reason for rejection (optional):');
+        await fetch(`${BASE_URL}/api/requests/${id}`, {
+            method: 'PUT', headers: authHdrs(),
+            body: JSON.stringify({ status, managerNotes: notes || '' })
+        });
+        loadRequests();
+    }
+}
+
+function closeReviewModal() {
+    document.getElementById('review-req-modal').classList.remove('open');
+}
+
+async function submitReviewRequest() {
+    const id     = document.getElementById('review-req-id').value;
+    const status = document.getElementById('review-req-status').value;
+    const notes  = document.getElementById('review-req-notes').value.trim();
+    const linkedAssetId = document.getElementById('review-req-asset').value;
+
+    const btn = document.getElementById('review-req-submit-btn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+
+    try {
+        await fetch(`${BASE_URL}/api/requests/${id}`, {
+            method: 'PUT', headers: authHdrs(),
+            body: JSON.stringify({ status, managerNotes: notes, linkedAssetId: linkedAssetId || null })
+        });
+        closeReviewModal();
+        loadRequests();
+        if (linkedAssetId) { loadAssets(); loadAssetStats(); }
+    } catch (e) {
+        console.error(e);
+        alert('Failed to update request');
+    } finally {
+        btn.textContent = 'Approve & Link'; btn.disabled = false;
+    }
 }
 
 async function loadAudits() {
