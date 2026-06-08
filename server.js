@@ -558,9 +558,14 @@ app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(10);
 
+        const totalAssets = await Asset.countDocuments();
+        const activeAssets = await Asset.countDocuments({ status: 'active' });
+
+
         res.json({
             totalUsers, activeUsers, pendingUsers,
             adminCount, managerCount, employeeCount,
+            totalAssets, activeAssets,
             recentActivities
         });
     } catch (err) {
@@ -1013,33 +1018,32 @@ app.put('/api/assets/:id/assign', authMiddleware, requireRole('admin', 'manager'
 
 app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
     try {
-        const requestingUser = await User.findById(req.userId).select('role');
         const baseFilter = req.userRole === 'employee'
-            ? { assignedTo: req.userId }
+            ? { assignedTo: new mongoose.Types.ObjectId(req.userId) }
             : {};
 
-        const total = await Asset.countDocuments(baseFilter);
-        const active = await Asset.countDocuments({ ...baseFilter, status: 'active' });
-        const inRepair = await Asset.countDocuments({ ...baseFilter, status: 'in-repair' });
-        const disposed = await Asset.countDocuments({ ...baseFilter, status: 'disposed' });
-        const lost = await Asset.countDocuments({ ...baseFilter, status: 'lost' });
-        const assigned = await Asset.countDocuments({ ...baseFilter, assignedTo: { $ne: null } });
-
-        const totalValue = await Asset.aggregate([
-            { $match: baseFilter },
-            { $group: { _id: null, total: { $sum: '$currentValue' } } }
-        ]);
-
-        const byCategory = await Asset.aggregate([
-            { $match: baseFilter },
-            { $group: { _id: '$categoryName', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 5 }
+        const [total, active, inRepair, disposed, lost, assigned, valueAgg, byCategory] = await Promise.all([
+            Asset.countDocuments(baseFilter),
+            Asset.countDocuments({ ...baseFilter, status: 'active' }),
+            Asset.countDocuments({ ...baseFilter, status: 'in-repair' }),
+            Asset.countDocuments({ ...baseFilter, status: 'disposed' }),
+            Asset.countDocuments({ ...baseFilter, status: 'lost' }),
+            Asset.countDocuments({ ...baseFilter, assignedTo: { $ne: null } }),
+            Asset.aggregate([
+                { $match: baseFilter },
+                { $group: { _id: null, total: { $sum: '$currentValue' } } }
+            ]),
+            Asset.aggregate([
+                { $match: baseFilter },
+                { $group: { _id: '$categoryName', count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 }
+            ])
         ]);
 
         res.json({
             total, active, inRepair, disposed, lost, assigned,
-            totalValue: totalValue[0]?.total || 0,
+            totalValue: valueAgg[0]?.total || 0,
             byCategory
         });
     } catch (err) {
@@ -1057,31 +1061,31 @@ app.post('/api/assets/bulk-delete', authMiddleware, requireRole('admin', 'manage
     }
 });
 
-app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
-    try {
-        const totalUsers = await User.countDocuments({ isApproved: true });
-        const activeUsers = await User.countDocuments({ isApproved: true, isActive: true });
-        const pendingUsers = await User.countDocuments({ isApproved: false });
-        const adminCount = await User.countDocuments({ role: 'admin', isApproved: true });
-        const managerCount = await User.countDocuments({ role: 'manager', isApproved: true });
-        const employeeCount = await User.countDocuments({ role: 'employee', isApproved: true });
-        const totalAssets = await Asset.countDocuments();
-        const activeAssets = await Asset.countDocuments({ status: 'active' });
+// app.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
+//     try {
+//         const totalUsers = await User.countDocuments({ isApproved: true });
+//         const activeUsers = await User.countDocuments({ isApproved: true, isActive: true });
+//         const pendingUsers = await User.countDocuments({ isApproved: false });
+//         const adminCount = await User.countDocuments({ role: 'admin', isApproved: true });
+//         const managerCount = await User.countDocuments({ role: 'manager', isApproved: true });
+//         const employeeCount = await User.countDocuments({ role: 'employee', isApproved: true });
+//         const totalAssets = await Asset.countDocuments();
+//         const activeAssets = await Asset.countDocuments({ status: 'active' });
 
-        const recentActivities = await Activity.find()
-            .sort({ createdAt: -1 })
-            .limit(10);
+//         const recentActivities = await Activity.find()
+//             .sort({ createdAt: -1 })
+//             .limit(10);
 
-        res.json({
-            totalUsers, activeUsers, pendingUsers,
-            adminCount, managerCount, employeeCount,
-            totalAssets, activeAssets,
-            recentActivities
-        });
-    } catch (err) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
+//         res.json({
+//             totalUsers, activeUsers, pendingUsers,
+//             adminCount, managerCount, employeeCount,
+//             totalAssets, activeAssets,
+//             recentActivities
+//         });
+//     } catch (err) {
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// });
 
 app.get('/api/maintenance', authMiddleware, async (req, res) => {
     try {

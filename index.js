@@ -94,7 +94,7 @@ function showApp() {
         const hideNavIds = [
             'nav-dashboard', 'nav-activity', 'nav-audits', 'nav-reports',
             'nav-inventory', 'nav-depreciation', 'nav-insurance',
-            'nav-finance', 'nav-equipment'
+            'nav-finance', 'nav-equipment', 'nav-section-main', 'nav-section-assets', 'admin-nav-section'
         ];
         hideNavIds.forEach(id => {
             const el = document.getElementById(id);
