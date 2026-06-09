@@ -929,14 +929,23 @@ async function deleteCategory(catId, catName) {
 async function loadAssets() {
     try {
         if (!allCategories.length) await loadCategories();
-        allAssets = [];
-        renderAssets([]);
+        const tbody = document.getElementById('assets-table-body');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:40px;">
+            <div style="display:inline-block; width:20px; height:20px; border:2px solid #4f6ef7; border-top-color:transparent; border-radius:50%; animation:spin 0.7s linear infinite; margin-right:8px; vertical-align:middle;"></div>
+            Loading assets...
+        </td></tr>`;
+
         const res = await fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() });
         if (res.status === 401) { logout(); return; }
         const data = await res.json();
         allAssets = Array.isArray(data) ? data : [];
         renderAssets(allAssets);
-    } catch (err) { console.log('Assets error:', err); }
+    }
+    catch (err) {
+        console.log('Assets error:', err);
+        const tbody = document.getElementById('assets-table-body');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#ef4444; padding:40px;">Failed to load assets. Please try again.</td></tr>`;
+    }
 }
 
 function renderAssets(assets) {
