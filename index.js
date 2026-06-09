@@ -84,6 +84,16 @@ function showApp() {
     document.getElementById('topbar-badge').innerHTML =
         `<span class="badge badge-${currentUser.role}">${currentUser.role}</span>`;
 
+    const allNavIds = [
+        'nav-dashboard', 'nav-activity', 'nav-audits', 'nav-reports',
+        'nav-inventory', 'nav-depreciation', 'nav-insurance',
+        'nav-finance', 'nav-equipment', 'nav-users', 'nav-approvals',
+        'nav-section-main', 'nav-section-assets', 'admin-nav-section'
+    ];
+    allNavIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
 
     if (currentUser.role !== 'admin') {
         document.getElementById('nav-users').style.display = 'none';
@@ -212,6 +222,9 @@ function logout() {
     localStorage.removeItem('ams_user');
     currentUser = null;
     allUsers = [];
+    allAssets = [];
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     showAuth();
     switchAuthTab('login');
 }
