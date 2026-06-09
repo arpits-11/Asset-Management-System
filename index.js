@@ -94,6 +94,10 @@ function showApp() {
         const el = document.getElementById(id);
         if (el) el.style.display = '';
     });
+    ['btn-truncate-all', 'btn-template', 'btn-bulk-import', 'add-asset-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
 
     if (currentUser.role !== 'admin') {
         document.getElementById('nav-users').style.display = 'none';
@@ -107,6 +111,10 @@ function showApp() {
             'nav-finance', 'nav-equipment', 'nav-section-main', 'nav-section-assets', 'admin-nav-section'
         ];
         hideNavIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        ['btn-truncate-all', 'btn-template', 'btn-bulk-import', 'add-asset-btn', 'btn-delete-selected'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -921,6 +929,8 @@ async function deleteCategory(catId, catName) {
 async function loadAssets() {
     try {
         if (!allCategories.length) await loadCategories();
+        allAssets = [];
+        renderAssets([]);
         const res = await fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() });
         if (res.status === 401) { logout(); return; }
         const data = await res.json();
@@ -2230,7 +2240,7 @@ async function openInvAssignModal(itemId, itemName) {
             fetch(`${BASE_URL}/api/users`, { headers: authHdrs() }),
             fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() })
         ]);
-        const users  = await uRes.json();
+        const users = await uRes.json();
         const assets = await aRes.json();
 
         document.getElementById('inv-assign-user').innerHTML =
@@ -2255,13 +2265,13 @@ function closeInvAssignModal() {
 }
 
 async function saveInvAssign() {
-    const userId   = document.getElementById('inv-assign-user').value;
-    const assetId  = document.getElementById('inv-assign-asset').value;
-    const qty      = parseInt(document.getElementById('inv-assign-qty').value) || 1;
-    const notes    = document.getElementById('inv-assign-notes').value.trim();
+    const userId = document.getElementById('inv-assign-user').value;
+    const assetId = document.getElementById('inv-assign-asset').value;
+    const qty = parseInt(document.getElementById('inv-assign-qty').value) || 1;
+    const notes = document.getElementById('inv-assign-notes').value.trim();
 
     if (!userId) { alert('⚠️ Please select a user to assign to.'); return; }
-    if (qty < 1)  { alert('⚠️ Quantity must be at least 1.'); return; }
+    if (qty < 1) { alert('⚠️ Quantity must be at least 1.'); return; }
 
     const btn = document.getElementById('inv-assign-save-btn');
     btn.textContent = 'Assigning...'; btn.disabled = true;
@@ -3152,23 +3162,24 @@ async function submitRequest() {
     }
 }
 
+let _reviewAllAssets = [];
+
 async function reviewRequest(id, status) {
     if (status === 'approved') {
         document.getElementById('review-req-id').value = id;
         document.getElementById('review-req-status').value = status;
         document.getElementById('review-req-notes').value = '';
-        document.getElementById('review-req-asset').innerHTML = '<option value="">Loading assets...</option>';
+        document.getElementById('review-req-asset').value = '';
+        document.getElementById('review-req-asset-search').value = '';
+        document.getElementById('review-req-asset-list').style.display = 'none';
+        document.getElementById('review-req-asset-selected').style.display = 'none';
+        document.getElementById('review-req-asset-selected').textContent = '';
         document.getElementById('review-req-modal').classList.add('open');
 
         try {
             const res = await fetch(`${BASE_URL}/api/assets`, { headers: authHdrs() });
-            const assets = await res.json();
-            document.getElementById('review-req-asset').innerHTML =
-                '<option value="">-- No asset to link (approve only) --</option>' +
-                assets.filter(a => a.status !== 'disposed').map(a =>
-                    `<option value="${a._id}">[${a.assetId}] ${a.name} (${a.status})</option>`
-                ).join('');
-        } catch (e) { console.error(e); }
+            _reviewAllAssets = (await res.json()).filter(a => a.status !== 'disposed');
+        } catch (e) { console.error(e); _reviewAllAssets = []; }
     } else {
         const notes = prompt('Enter reason for rejection (optional):');
         await fetch(`${BASE_URL}/api/requests/${id}`, {
@@ -3179,14 +3190,54 @@ async function reviewRequest(id, status) {
     }
 }
 
+function filterReviewAssets(query) {
+    const list = document.getElementById('review-req-asset-list');
+    const q = query.trim().toLowerCase();
+    if (!q) { list.style.display = 'none'; return; }
+
+    const filtered = _reviewAllAssets.filter(a =>
+        a.assetId?.toLowerCase().includes(q) ||
+        a.name?.toLowerCase().includes(q) ||
+        a.vendorName?.toLowerCase().includes(q) ||
+        a.subCategory?.toLowerCase().includes(q)
+    ).slice(0, 30);
+
+    if (!filtered.length) {
+        list.innerHTML = '<div style="padding:10px 14px; color:#94a3b8; font-size:13px;">No assets found</div>';
+        list.style.display = 'block';
+        return;
+    }
+
+    list.innerHTML = filtered.map(a => `
+        <div onclick="selectReviewAsset('${a._id}','[${a.assetId}] ${a.name} (${a.vendorName || ''}) — ${a.status}')"
+            style="padding:8px 14px; cursor:pointer; font-size:13px; border-bottom:1px solid var(--border);"
+            onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+            <span style="font-weight:600; font-family:monospace;">${a.assetId}</span>
+            &nbsp;${a.name}
+            <span style="color:#94a3b8;"> — ${a.vendorName || ''}</span>
+            &nbsp;<span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${a.status === 'active' ? '#22c55e22' : '#f59e0b22'}; color:${a.status === 'active' ? '#22c55e' : '#f59e0b'}">${a.status}</span>
+        </div>`).join('');
+    list.style.display = 'block';
+}
+
+function selectReviewAsset(id, label) {
+    document.getElementById('review-req-asset').value = id;
+    document.getElementById('review-req-asset-search').value = '';
+    document.getElementById('review-req-asset-list').style.display = 'none';
+    const sel = document.getElementById('review-req-asset-selected');
+    sel.textContent = '✅ Selected: ' + label;
+    sel.style.display = 'block';
+}
+
 function closeReviewModal() {
     document.getElementById('review-req-modal').classList.remove('open');
+    _reviewAllAssets = [];
 }
 
 async function submitReviewRequest() {
-    const id     = document.getElementById('review-req-id').value;
+    const id = document.getElementById('review-req-id').value;
     const status = document.getElementById('review-req-status').value;
-    const notes  = document.getElementById('review-req-notes').value.trim();
+    const notes = document.getElementById('review-req-notes').value.trim();
     const linkedAssetId = document.getElementById('review-req-asset').value;
 
     const btn = document.getElementById('review-req-submit-btn');
