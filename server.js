@@ -271,7 +271,8 @@ const EquipmentMaster = mongoose.model('EquipmentMaster', equipmentMasterSchema)
 
 const deviceTypeSchema = new mongoose.Schema({
     shortCode: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    fullName: { type: String, required: true, trim: true }
+    fullName: { type: String, required: true, trim: true },
+    depreciationRate: { type: Number, default: null }
 }, { timestamps: true });
 const DeviceType = mongoose.model('DeviceType', deviceTypeSchema);
 
@@ -1033,7 +1034,7 @@ app.get('/api/assets/stats/summary', authMiddleware, async (req, res) => {
 
         const [total, active, inRepair, disposed, lost, assigned, valueAgg, byCategory] = await Promise.all([
             Asset.countDocuments(baseFilter),
-           Asset.countDocuments({ ...baseFilter, status: { $in: ['active', 'assigned'] } }),
+            Asset.countDocuments({ ...baseFilter, status: { $in: ['active', 'assigned'] } }),
             Asset.countDocuments({ ...baseFilter, status: 'in-repair' }),
             Asset.countDocuments({ ...baseFilter, status: 'disposed' }),
             Asset.countDocuments({ ...baseFilter, status: 'lost' }),
@@ -1701,11 +1702,18 @@ app.post('/api/depreciation/calculate', authMiddleware, requireRole('admin', 'ma
 app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const { method, rate, year } = req.body;
-        if (!method || !rate || !year)
-            return res.status(400).json({ message: 'Method, rate and year are required' });
+        if (!method || !year)
+            return res.status(400).json({ message: 'Method and year are required' });
 
         const assets = await Asset.find({ status: { $in: ['active', 'in-repair'] } });
         const user = await User.findById(req.userId);
+        const deviceTypes = await DeviceType.find({});
+        const dtByShort = {};
+        const dtByFull = {};
+        deviceTypes.forEach(dt => {
+            dtByShort[dt.shortCode.toUpperCase()] = dt;
+            dtByFull[dt.fullName.toLowerCase()] = dt;
+        });
         const results = [];
         let skipped = 0;
 
@@ -1716,11 +1724,19 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
             const openingValue = asset.currentValue || asset.purchasePrice || 0;
             if (openingValue <= 0) { skipped++; continue; }
 
-            const { amount, closingValue } = calculateDepreciation(method, openingValue, parseFloat(rate));
+            const assetName = (asset.name || '').trim();
+            const dtMatch = dtByShort[assetName.toUpperCase()] || dtByFull[assetName.toLowerCase()];
+            const effectiveRate = (dtMatch && dtMatch.depreciationRate != null)
+                ? dtMatch.depreciationRate
+                : parseFloat(rate);
+
+            if (!effectiveRate || effectiveRate <= 0) { skipped++; continue; }
+
+            const { amount, closingValue } = calculateDepreciation(method, openingValue, effectiveRate);
             const record = new Depreciation({
                 assetId: asset._id, assetName: asset.name, assetCode: asset.assetId,
                 year: parseInt(year), method,
-                openingValue, depreciationRate: parseFloat(rate),
+                openingValue, depreciationRate: effectiveRate,
                 depreciationAmount: amount, closingValue,
                 calculatedBy: req.userId, calculatedByName: user.name
             });
@@ -2057,12 +2073,15 @@ app.get('/api/device-types', authMiddleware, async (req, res) => {
 
 app.post('/api/device-types', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
-        const { shortCode, fullName } = req.body;
+        const { shortCode, fullName, depreciationRate } = req.body;
         if (!shortCode || !fullName)
             return res.status(400).json({ message: 'Short code and full name are required' });
         const exists = await DeviceType.findOne({ shortCode: shortCode.toUpperCase() });
         if (exists) return res.status(409).json({ message: `Short code "${shortCode.toUpperCase()}" already exists` });
-        const dt = new DeviceType({ shortCode: shortCode.toUpperCase(), fullName });
+        const dt = new DeviceType({
+            shortCode: shortCode.toUpperCase(), fullName,
+            depreciationRate: depreciationRate != null ? parseFloat(depreciationRate) : null
+        })
         await dt.save();
         res.status(201).json({ message: 'Device type added', deviceType: dt });
     } catch (err) { res.status(500).json({ message: 'Server error', error: err.message }); }
@@ -2070,12 +2089,11 @@ app.post('/api/device-types', authMiddleware, requireRole('admin', 'manager'), a
 
 app.put('/api/device-types/:id', authMiddleware, requireRole('admin', 'manager'), async (req, res) => {
     try {
-        const { shortCode, fullName } = req.body;
-        const dt = await DeviceType.findByIdAndUpdate(
-            req.params.id,
-            { shortCode: shortCode?.toUpperCase(), fullName },
-            { new: true }
-        );
+        const { shortCode, fullName, depreciationRate } = req.body;
+        const updateBody = { shortCode: shortCode?.toUpperCase(), fullName };
+        if (depreciationRate != null) updateBody.depreciationRate = parseFloat(depreciationRate);
+        else updateBody.depreciationRate = null;
+        const dt = await DeviceType.findByIdAndUpdate(req.params.id, updateBody, { new: true });
         res.json({ message: 'Device type updated', deviceType: dt });
     } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
