@@ -1034,7 +1034,7 @@ async function openAssetModal() {
     document.getElementById('save-asset-btn').textContent = 'Add Asset';
 
     ['a-name', 'a-subcategory', 'a-description', 'a-purchase-price',
-        'a-current-value', 'a-vendor', 'a-serial', 'a-tag', 'a-location'].forEach(id => {
+        'a-current-value', 'a-vendor', 'a-serial', 'a-location'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1087,7 +1087,6 @@ async function openEditAssetModal(assetId) {
     document.getElementById('a-current-value').value = asset.currentValue || '';
     document.getElementById('a-vendor').value = asset.vendorName || '';
     document.getElementById('a-serial').value = asset.serialNumber || '';
-    document.getElementById('a-tag').value = asset.assetTag || '';
     const locSelect = document.getElementById('a-location');
     if (locSelect) {
         locSelect.innerHTML = '<option value="">Select location...</option>' +
@@ -1100,9 +1099,43 @@ async function openEditAssetModal(assetId) {
     if (asset.warrantyExpiry)
         document.getElementById('a-warranty').value = new Date(asset.warrantyExpiry).toISOString().split('T')[0];
 
+    if (!allEquipmentMaster.length || !allDeviceTypes.length) await loadEquipmentMaster();
     if (!allCategories.length) await loadCategories();
+
     populateCategoryDropdowns();
     document.getElementById('a-category').value = asset.categoryId?._id || asset.categoryId || '';
+
+    populateDeviceTypeDropdown();
+    const dtSelect = document.getElementById('a-device-type-select');
+    const nameInput = document.getElementById('a-name');
+    if (dtSelect && dtSelect.style.display !== 'none') {
+        const assetName = (asset.name || '').toUpperCase();
+        const matchDt = allDeviceTypes.find(dt =>
+            dt.shortCode.toUpperCase() === assetName ||
+            dt.fullName.toLowerCase() === asset.name?.toLowerCase()
+        );
+        if (matchDt) {
+            dtSelect.value = matchDt.shortCode;
+            nameInput.value = matchDt.shortCode;
+        } else {
+            dtSelect.style.display = 'none';
+            nameInput.style.display = '';
+            nameInput.value = asset.name || '';
+        }
+    } else {
+        nameInput.value = asset.name || '';
+    }
+
+    populateEquipmentDropdowns();
+    const masterSelect = document.getElementById('a-master-select');
+    if (masterSelect) {
+        const vendorName = (asset.vendorName || asset.subCategory || '').trim();
+        const matchEq = allEquipmentMaster.find(eq =>
+            eq.manufacturer.toLowerCase() === vendorName.toLowerCase() ||
+            eq.productCode.toLowerCase() === vendorName.toLowerCase()
+        );
+        masterSelect.value = matchEq ? matchEq._id : '';
+    }
 
     await populateUserDropdown('a-assigned-to', asset.assignedTo?._id || asset.assignedTo || '');
 
@@ -1151,7 +1184,6 @@ async function saveAsset(forceCreate = false) {
         currentValue: parseFloat(document.getElementById('a-current-value').value) || 0,
         vendorName: document.getElementById('a-vendor').value.trim(),
         serialNumber: document.getElementById('a-serial').value.trim(),
-        assetTag: document.getElementById('a-tag').value.trim(),
         warrantyExpiry: document.getElementById('a-warranty').value,
         location: document.getElementById('a-location').value.trim(),
         assignedTo: assignEl.value || null,
@@ -1239,7 +1271,6 @@ async function openDetailModal(assetId) {
         document.getElementById('detail-info-grid').innerHTML = [
             ['Asset ID', viewingAsset.assetId],
             ['Serial No.', viewingAsset.serialNumber || '—'],
-            ['Asset Tag', viewingAsset.assetTag || '—'],
             ['Location', viewingAsset.location || '—'],
             ['Vendor', viewingAsset.vendorName || '—'],
             ['Assigned To', viewingAsset.assignedToName || 'Unassigned'],
@@ -1537,7 +1568,6 @@ function handleCSVFile(event) {
                     if (val && !val.includes('/') && !obj.vendor) obj.vendor = val.trim();
                 }
                 if (cleanHeader === 'Serial Number' || cleanHeader === 'SerialNumber' || cleanHeader === 'Serial No') obj.serialNumber = val;
-                if (cleanHeader === 'Asset Tag') obj.assetTag = val;
                 if (cleanHeader === 'Warranty Expiry' || cleanHeader === 'Warranty End') obj.warrantyExpiry = safeDate(val);
             });
             jsonData.push(obj);
@@ -1583,7 +1613,7 @@ function exportAssetsTemplateCSV() {
         'Name', 'Description', 'Category', 'Sub Category', 'Status',
         'Condition', 'Location', 'Assigned To', 'Purchase Date',
         'Purchase Price', 'Current Value', 'Vendor', 'Serial Number',
-        'Asset Tag', 'Warranty Expiry'
+        'Warranty Expiry'
     ];
 
     const csv = headers.join(',');
@@ -3132,9 +3162,15 @@ async function loadRequests() {
             <td>${r.managerNotes || '-'}</td>
             <td>${new Date(r.createdAt).toLocaleDateString()}</td>
             <td>${currentUser.role !== 'employee' && r.status === 'pending' ? `
-                    <button class="btn btn-success btn-sm" onclick="reviewRequest('${r._id}', 'approved')">👍</button>
-                    <button class="btn btn-danger btn-sm" onclick="reviewRequest('${r._id}', 'rejected')">👎</button>
-                    ` : '—'}
+                   <div style="display:flex; gap:6px;">
+    <button class="btn btn-sm" style="background:#22c55e; color:white; font-weight:600; padding:4px 12px; border-radius:6px;" onclick="reviewRequest('${r._id}', 'approved')">Accept</button>
+    <button class="btn btn-sm" style="background:#ef4444; color:white; font-weight:600; padding:4px 12px; border-radius:6px;" onclick="reviewRequest('${r._id}', 'rejected')">Reject</button>
+</div>
+` : r.status === 'approved' ? `
+    <span style="color:#22c55e; font-weight:600; font-size:13px;">✓ Accepted</span>
+` : r.status === 'rejected' ? `
+    <span style="color:#ef4444; font-weight:600; font-size:13px;">✕ Rejected</span>
+` : '—'}
             </td>
             </tr>
             `).join('');
