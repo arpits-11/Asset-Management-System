@@ -772,7 +772,10 @@ async function loadCategories() {
 
         allCategories = Array.isArray(data) ? data : [];
         renderCategories(allCategories);
+        const aCatEl = document.getElementById('a-category');
+        const savedCatVal = aCatEl ? aCatEl.value : '';
         populateCategoryDropdowns();
+        if (aCatEl && savedCatVal) aCatEl.value = savedCatVal;
     }
     catch (err) {
         console.log('Categories error:', err);
@@ -1102,8 +1105,10 @@ async function openEditAssetModal(assetId) {
     if (!allEquipmentMaster.length || !allDeviceTypes.length) await loadEquipmentMaster();
     if (!allCategories.length) await loadCategories();
 
+    const targetCategoryId = asset.categoryId?._id || asset.categoryId || '';
     populateCategoryDropdowns();
-    document.getElementById('a-category').value = asset.categoryId?._id || asset.categoryId || '';
+    const catEl = document.getElementById('a-category');
+    if (catEl && targetCategoryId) catEl.value = targetCategoryId;
 
     populateDeviceTypeDropdown();
     const dtSelect = document.getElementById('a-device-type-select');
@@ -2787,6 +2792,23 @@ async function openSingleDepreciationModal() {
     document.getElementById('single-depr-modal').classList.add('open');
 }
 
+function onSdAssetChange() {
+    const assetEl = document.getElementById('sd-asset');
+    const rateEl = document.getElementById('sd-rate');
+    if (!assetEl || !rateEl) return;
+    const asset = allAssets.find(a => a._id === assetEl.value);
+    if (!asset) return;
+    const assetName = (asset.name || '').trim();
+    const dt = allDeviceTypes.find(d =>
+        d.shortCode.toUpperCase() === assetName.toUpperCase() ||
+        d.fullName.toLowerCase() === assetName.toLowerCase()
+    );
+    if (dt && dt.depreciationRate != null) {
+        rateEl.value = dt.depreciationRate;
+        previewDepreciation();
+    }
+}
+
 function closeSingleDepreciationModal() {
     document.getElementById('single-depr-modal').classList.remove('open');
 }
@@ -3463,6 +3485,7 @@ function renderDeviceTypes(dts) {
         <tr>
             <td style="font-weight:600; font-family:monospace;">${dt.shortCode}</td>
             <td>${dt.fullName}</td>
+            <td style="color:#4f6ef7; font-weight:500;">${dt.depreciationRate != null ? dt.depreciationRate + '%' : '<span style="color:#94a3b8;">—</span>'}</td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
                 <button class="btn btn-outline btn-sm" onclick="openDtModal('${dt._id}')">✏️</button>
@@ -3481,11 +3504,13 @@ function openDtModal(id = null) {
     document.getElementById('save-dt-btn').textContent = id ? 'Save Changes' : 'Add Device Type';
     document.getElementById('dt-short-code').value = '';
     document.getElementById('dt-full-name').value = '';
+    document.getElementById('dt-depreciation-rate').value = '';
     if (id) {
         const dt = allDeviceTypes.find(d => d._id === id);
         if (dt) {
             document.getElementById('dt-short-code').value = dt.shortCode || '';
             document.getElementById('dt-full-name').value = dt.fullName || '';
+            document.getElementById('dt-depreciation-rate').value = dt.depreciationRate != null ? dt.depreciationRate : '';
         }
     }
     document.getElementById('device-type-modal').classList.add('open');
@@ -3499,6 +3524,8 @@ function closeDtModal() {
 async function saveDt() {
     const shortCode = document.getElementById('dt-short-code').value.trim().toUpperCase();
     const fullName = document.getElementById('dt-full-name').value.trim();
+    const deprRateRaw = document.getElementById('dt-depreciation-rate').value.trim();
+    const depreciationRate = deprRateRaw !== '' ? parseFloat(deprRateRaw) : null;
 
     if (!shortCode || !fullName) {
         alert('⚠️ Both Short Code and Full Name are required.');
@@ -3511,7 +3538,9 @@ async function saveDt() {
     try {
         const url = editingDtId ? `${BASE_URL}/api/device-types/${editingDtId}` : `${BASE_URL}/api/device-types`;
         const method = editingDtId ? 'PUT' : 'POST';
-        const res = await fetch(url, { method, headers: authHdrs(), body: JSON.stringify({ shortCode, fullName }) });
+        const body = { shortCode, fullName };
+        if (depreciationRate !== null) body.depreciationRate = depreciationRate;
+        const res = await fetch(url, { method, headers: authHdrs(), body: JSON.stringify(body) });
         const data = await res.json();
         if (res.ok) {
             closeDtModal();
