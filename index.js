@@ -1106,10 +1106,9 @@ async function openEditAssetModal(assetId) {
 
     const targetCategoryId = asset.categoryId?._id || asset.categoryId || '';
     populateCategoryDropdowns();
+    populateDeviceTypeDropdown();
     const catEl = document.getElementById('a-category');
     if (catEl && targetCategoryId) catEl.value = targetCategoryId;
-
-    populateDeviceTypeDropdown();
     const dtSelect = document.getElementById('a-device-type-select');
     const nameInput = document.getElementById('a-name');
     if (dtSelect && dtSelect.style.display !== 'none') {
