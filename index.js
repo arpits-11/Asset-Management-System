@@ -772,10 +772,7 @@ async function loadCategories() {
 
         allCategories = Array.isArray(data) ? data : [];
         renderCategories(allCategories);
-        const aCatEl = document.getElementById('a-category');
-        const savedCatVal = aCatEl ? aCatEl.value : '';
         populateCategoryDropdowns();
-        if (aCatEl && savedCatVal) aCatEl.value = savedCatVal;
     }
     catch (err) {
         console.log('Categories error:', err);
@@ -875,7 +872,7 @@ async function saveCategory() {
     const name = document.getElementById('cat-name').value.trim();
     const type = document.getElementById('cat-type').value;
     const mobility = document.getElementById('cat-mobility').value;
-    const icon ='';
+    const icon = '';
     const description = document.getElementById('cat-description').value.trim();
 
     clearMsg('cat-modal-error');
@@ -1099,7 +1096,13 @@ async function openEditAssetModal(assetId) {
         document.getElementById('a-warranty').value = new Date(asset.warrantyExpiry).toISOString().split('T')[0];
 
     if (!allEquipmentMaster.length || !allDeviceTypes.length) await loadEquipmentMaster();
-    if (!allCategories.length) await loadCategories();
+    if (!allCategories.length) {
+        try {
+            const catRes = await fetch(`${BASE_URL}/api/categories`, { headers: authHdrs() });
+            const catData = await catRes.json();
+            allCategories = Array.isArray(catData) ? catData : [];
+        } catch (e) { allCategories = []; }
+    }
 
     const targetCategoryId = asset.categoryId?._id || asset.categoryId || '';
     populateCategoryDropdowns();
