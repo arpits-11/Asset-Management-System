@@ -2744,8 +2744,9 @@ async function bulkCalculate() {
     const rate = document.getElementById('bulk-rate').value;
     const msgEl = document.getElementById('bulk-msg');
 
-    if (!rate || rate <= 0 || rate > 100) {
-        msgEl.innerHTML = '<div class="error-msg">Please enter a valid rate between 0 and 100.</div>';
+    const rateVal = rate !== '' ? parseFloat(rate) : null;
+    if (rateVal !== null && (rateVal < 0 || rateVal > 100)) {
+        msgEl.innerHTML = '<div class="error-msg">Fallback rate must be between 0 and 100.</div>';
         return;
     }
 
