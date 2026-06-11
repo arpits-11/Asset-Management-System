@@ -439,7 +439,7 @@ function renderPendingUsers(users) {
     if (!users.length) {
         el.innerHTML = `
             <div style="text-align:center; padding:60px;">
-                <div style="font-size:3rem; margin-bottom:12px;">✅</div>
+                <div style="font-size:3rem; margin-bottom:12px;"></div>
                 <p style="color:#94a3b8; font-size:14px;">No pending approvals. All caught up!</p>
             </div>`;
         return;
@@ -643,17 +643,17 @@ async function loadActivity() {
         }
 
         const actionIcons = {
-            login: '🔐',
-            user_created: '➕',
-            user_updated: '✏️',
-            user_deleted: '🗑️',
-            user_approved: '✅',
-            user_rejected: '❌'
+            login: '',
+            user_created: '',
+            user_updated: '',
+            user_deleted: '',
+            user_approved: '',
+            user_rejected: ''
         };
 
         el.innerHTML = activities.map(a => `
             <div class="activity-item">
-                <div style="font-size:20px; flex-shrink:0;">${actionIcons[a.action] || '📌'}</div>
+                <div style="font-size:20px; flex-shrink:0;">${actionIcons[a.action] || ''}</div>
                 <div style="flex:1;">
                     <div class="activity-text">
                         <strong>${a.userName}</strong>
@@ -813,7 +813,7 @@ function renderCategories(cats) {
                 ${currentUser?.role !== 'employee' ? `
                 <div class="category-actions">
                     <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c._id}')">Edit</button>
-                    ${currentUser?.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteCategory('${c._id}', '${c.name}')">🗑️</button>` : ''}
+                    ${currentUser?.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteCategory('${c._id}', '${c.name}')">Delete</button>` : ''}
                 </div>` : ''}
             </div>
         </div>`).join('');
@@ -844,7 +844,6 @@ function openCategoryModal() {
     document.getElementById('cat-name').value = '';
     document.getElementById('cat-type').value = 'tangible';
     document.getElementById('cat-mobility').value = 'moveable';
-    document.getElementById('cat-icon').value = '';
     document.getElementById('cat-description').value = '';
     clearMsg('cat-modal-error');
     clearMsg('cat-modal-success');
@@ -861,7 +860,6 @@ function openEditCategoryModal(catId) {
     document.getElementById('cat-name').value = cat.name;
     document.getElementById('cat-type').value = cat.type;
     document.getElementById('cat-mobility').value = cat.mobility;
-    document.getElementById('cat-icon').value = cat.icon || '';
     document.getElementById('cat-description').value = cat.description || '';
     clearMsg('cat-modal-error');
     clearMsg('cat-modal-success');
