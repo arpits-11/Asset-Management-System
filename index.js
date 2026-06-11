@@ -11,7 +11,7 @@ function applyTheme(isDark) {
     const checkbox = document.getElementById('theme-checkbox');
     const label = document.getElementById('theme-label');
     if (checkbox) checkbox.checked = isDark;
-    if (label) label.textContent = isDark ? '🌙 Dark' : '☀️ Light';
+    if (label) label.textContent = isDark ? 'Dark' : 'Light';
 }
 
 (function initTheme() {
@@ -132,10 +132,10 @@ async function login() {
     const password = document.getElementById('login-password').value;
     clearMsg('login-msg');
 
-    if (!email && !password) { showMsg('login-msg', '⚠️ Email and password are required.'); return; }
-    if (!email) { showMsg('login-msg', '⚠️ Please enter your email address.'); return; }
-    if (!password) { showMsg('login-msg', '⚠️ Please enter your password.'); return; }
-    if (!email.includes('@') || !email.includes('.')) { showMsg('login-msg', '⚠️ Please enter a valid email address.'); return; }
+    if (!email && !password) { showMsg('login-msg', 'Email and password are required.'); return; }
+    if (!email) { showMsg('login-msg', 'Please enter your email address.'); return; }
+    if (!password) { showMsg('login-msg', 'Please enter your password.'); return; }
+    if (!email.includes('@') || !email.includes('.')) { showMsg('login-msg', 'Please enter a valid email address.'); return; }
 
     const btn = document.querySelector('#login-form .btn-primary');
     btn.textContent = 'Signing in...';
@@ -174,15 +174,15 @@ async function register() {
     const phone = document.getElementById('reg-phone').value.trim();
     clearMsg('register-msg');
 
-    if (!name) { showMsg('register-msg', '⚠️ Full name is required.'); return; }
-    if (name.length < 3) { showMsg('register-msg', '⚠️ Name must be at least 3 characters.'); return; }
-    if (!email) { showMsg('register-msg', '⚠️ Email address is required.'); return; }
-    if (!email.includes('@') || !email.includes('.')) { showMsg('register-msg', '⚠️ Please enter a valid email address.'); return; }
-    if (!password) { showMsg('register-msg', '⚠️ Password is required.'); return; }
-    if (password.length < 6) { showMsg('register-msg', '⚠️ Password must be at least 6 characters.'); return; }
-    if (!/^(?=.*[0-9])(?=.*[@$#&])/.test(password)) { showMsg('register-msg', '⚠️ Password must contain both a number a special character(@$#&).'); return; }
-    if (!confirm) { showMsg('register-msg', '⚠️ Please confirm your password.'); return; }
-    if (password !== confirm) { showMsg('register-msg', '⚠️ Passwords do not match.'); return; }
+    if (!name) { showMsg('register-msg', 'Full name is required.'); return; }
+    if (name.length < 3) { showMsg('register-msg', 'Name must be at least 3 characters.'); return; }
+    if (!email) { showMsg('register-msg', 'Email address is required.'); return; }
+    if (!email.includes('@') || !email.includes('.')) { showMsg('register-msg', 'Please enter a valid email address.'); return; }
+    if (!password) { showMsg('register-msg', 'Password is required.'); return; }
+    if (password.length < 6) { showMsg('register-msg', 'Password must be at least 6 characters.'); return; }
+    if (!/^(?=.*[0-9])(?=.*[@$#&])/.test(password)) { showMsg('register-msg', 'Password must contain both a number a special character(@$#&).'); return; }
+    if (!confirm) { showMsg('register-msg', 'Please confirm your password.'); return; }
+    if (password !== confirm) { showMsg('register-msg', 'Passwords do not match.'); return; }
 
     const btn = document.querySelector('#register-form .btn-primary');
     btn.textContent = 'Creating account...';
@@ -199,10 +199,10 @@ async function register() {
         if (res.ok) {
             if (data.isFirstUser) {
                 showMsg('register-msg',
-                    '🎉 You are the first user — you have been made Admin! Please sign in.', 'success');
+                    'You are the first user — you have been made Admin! Please sign in.', 'success');
             } else {
                 showMsg('register-msg',
-                    '✅ Registration successful! Your account is pending admin approval. You will be notified once approved.', 'success');
+                    'Registration successful! Your account is pending admin approval. You will be notified once approved.', 'success');
             }
 
             document.getElementById('reg-name').value = '';
@@ -244,21 +244,21 @@ function showPage(page) {
     document.getElementById(`nav-${page}`)?.classList.add('active');
 
     const titles = {
-        dashboard: '📊 Dashboard',
-        users: '👥 User Management',
-        approvals: '✅ Pending Approvals',
-        activity: '📋 Activity Log',
-        assets: '📦 All Assets',
-        categories: '🗂️ Categories',
-        inventory: '🏭 Inventory',
-        maintenance: '🔧 Maintenance',
-        alerts: '🔔 Alerts',
-        reports: '📈 Reports',
-        depreciation: '📉 Depreciation',
-        insurance: '🛡️ Insurance',
-        finance: '💰 Finance Dashboard',
-        requests: '🙋 My Requests',
-        audits: '🔍 Asset Audits'
+        dashboard: 'Dashboard',
+        users: 'User Management',
+        approvals: 'Pending Approvals',
+        activity: 'Activity Log',
+        assets: 'All Assets',
+        categories: 'Categories',
+        inventory: 'Inventory',
+        maintenance: 'Maintenance',
+        alerts: 'Alerts',
+        reports: 'Reports',
+        depreciation: 'Depreciation',
+        insurance: 'Insurance',
+        finance: 'Finance Dashboard',
+        requests: 'My Requests',
+        audits: 'Asset Audits'
     };
     document.getElementById('page-title').textContent = titles[page] || page;
 
@@ -379,8 +379,8 @@ function renderUsers(users) {
             <td>
                 ${currentUser.role === 'admin' && u._id !== currentUser._id ? `
                     <div style="display:flex; gap:6px;">
-                        <button class="btn btn-outline btn-sm" onclick="openEditUserModal('${u._id}')">✏️ Edit</button>
-                        <button class="btn btn-danger  btn-sm" onclick="openDeleteModal('${u._id}', '${u.name}')">🗑️</button>
+                        <button class="btn btn-outline btn-sm" onclick="openEditUserModal('${u._id}')">Edit</button>
+                        <button class="btn btn-danger  btn-sm" onclick="openDeleteModal('${u._id}', '${u.name}')">Delete</button>
                     </div>
                 ` : '<span style="color:#475569; font-size:12px;">—</span>'}
             </td>
@@ -467,8 +467,8 @@ function renderPendingUsers(users) {
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                 </select>
-                <button class="btn btn-success btn-sm" onclick="approveUser('${u._id}')">✅ Approve</button>
-                <button class="btn btn-danger  btn-sm" onclick="rejectUser('${u._id}', '${u.name}')">❌ Reject</button>
+                <button class="btn btn-success btn-sm" onclick="approveUser('${u._id}')">Approve</button>
+                <button class="btn btn-danger  btn-sm" onclick="rejectUser('${u._id}', '${u.name}')">Reject</button>
             </div>
         </div>
     `).join('');
@@ -555,17 +555,17 @@ async function saveUser() {
     clearMsg('user-modal-error');
     clearMsg('user-modal-success');
 
-    if (!name) { showMsg('user-modal-error', '⚠️ Full name is required.'); return; }
-    if (name.length < 3) { showMsg('user-modal-error', '⚠️ Name must be at least 3 characters.'); return; }
-    if (!email) { showMsg('user-modal-error', '⚠️ Email address is required.'); return; }
-    if (!email.includes('@') || !email.includes('.')) { showMsg('user-modal-error', '⚠️ Please enter a valid email address.'); return; }
+    if (!name) { showMsg('user-modal-error', 'Full name is required.'); return; }
+    if (name.length < 3) { showMsg('user-modal-error', 'Name must be at least 3 characters.'); return; }
+    if (!email) { showMsg('user-modal-error', 'Email address is required.'); return; }
+    if (!email.includes('@') || !email.includes('.')) { showMsg('user-modal-error', 'Please enter a valid email address.'); return; }
     if (!editingUserId) {
-        if (!password) { showMsg('user-modal-error', '⚠️ Password is required.'); return; }
-        if (password.length < 6) { showMsg('user-modal-error', '⚠️ Password must be at least 6 characters.'); return; }
-        if (!/^(?=.*[0-9])(?=.*[@$#&])/.test(password)) { showMsg('register-msg', '⚠️ Password must contain both a number a special character(@$#&).'); return; }
+        if (!password) { showMsg('user-modal-error', 'Password is required.'); return; }
+        if (password.length < 6) { showMsg('user-modal-error', 'Password must be at least 6 characters.'); return; }
+        if (!/^(?=.*[0-9])(?=.*[@$#&])/.test(password)) { showMsg('register-msg', 'Password must contain both a number a special character(@$#&).'); return; }
     }
-    if (!role) { showMsg('user-modal-error', '⚠️ Please select a role.'); return; }
-    if (phone && !/^[0-9+\-\s()]{10}$/.test(phone)) { showMsg('user-modal-error', '⚠️ Please enter a valid phone number.'); return; }
+    if (!role) { showMsg('user-modal-error', 'Please select a role.'); return; }
+    if (phone && !/^[0-9+\-\s()]{10}$/.test(phone)) { showMsg('user-modal-error', 'Please enter a valid phone number.'); return; }
 
     const btn = document.getElementById('save-user-btn');
     btn.textContent = 'Saving...';
@@ -582,7 +582,7 @@ async function saveUser() {
         const data = await res.json();
 
         if (res.ok) {
-            showMsg('user-modal-success', editingUserId ? '✅ User updated successfully!' : '✅ User created successfully!', 'success');
+            showMsg('user-modal-success', editingUserId ? 'User updated successfully!' : 'User created successfully!', 'success');
             loadUsers();
             loadDashboard();
             setTimeout(() => closeUserModal(), 1500);
@@ -697,11 +697,11 @@ const conditionColors = {
 
 const historyIcons = {
     'assigned': '👤',
-    'transferred': '🔄',
+    'transferred': 'transferred',
     'returned': '↩️',
     'active': '✅',
     'in-repair': '🔧',
-    'disposed': '🗑️',
+    'disposed': 'disposed',
     'lost': '❌',
     'reserved': '🔒'
 };
@@ -787,14 +787,13 @@ function renderCategories(cats) {
     const grid = document.getElementById('categories-grid');
     if (!cats.length) {
         grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px;">
-                <div style="font-size:3rem; margin-bottom:12px;">🗂️</div>
+                <div style="font-size:3rem; margin-bottom:12px;"></div>
                 <p style="color:#94a3b8; margin-bottom:16px;">No categories yet. Add your first one!</p>
             </div>`;
         return;
     }
     grid.innerHTML = cats.map(c => `<div class="category-card">
             <div class="category-card-header">
-                <div class="category-icon">${c.icon || '📦'}</div>
                 <div>
                     <div class="category-name">${c.name}</div>
                     <div class="category-meta">
@@ -813,7 +812,7 @@ function renderCategories(cats) {
                 <span class="category-count">${c.assetCount || 0} asset${c.assetCount === 1 ? '' : 's'}</span>
                 ${currentUser?.role !== 'employee' ? `
                 <div class="category-actions">
-                    <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c._id}')">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c._id}')">Edit</button>
                     ${currentUser?.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteCategory('${c._id}', '${c.name}')">🗑️</button>` : ''}
                 </div>` : ''}
             </div>
@@ -825,7 +824,7 @@ function populateCategoryDropdowns() {
     if (aCat) {
         const val = aCat.value;
         aCat.innerHTML = '<option value="">Select category...</option>' + allCategories.map(c =>
-            `<option value="${c._id}">${c.icon || '📦'}${c.name}</option>`).join('');
+            `<option value="${c._id}">${c.name}</option>`).join('');
         if (val) aCat.value = val;
     }
     const fCat = document.getElementById('asset-category-filter');
@@ -878,17 +877,17 @@ async function saveCategory() {
     const name = document.getElementById('cat-name').value.trim();
     const type = document.getElementById('cat-type').value;
     const mobility = document.getElementById('cat-mobility').value;
-    const icon = document.getElementById('cat-icon').value.trim() || '📦';
+    const icon ='';
     const description = document.getElementById('cat-description').value.trim();
 
     clearMsg('cat-modal-error');
     clearMsg('cat-modal-success');
 
-    if (!name) { showMsg('cat-modal-error', '⚠️ Category name is required.'); return; }
-    if (name.length < 2) { showMsg('cat-modal-error', '⚠️ Category name must be at least 2 characters.'); return; }
-    if (name.length > 50) { showMsg('cat-modal-error', '⚠️ Category name must be under 50 characters.'); return; }
-    if (!type) { showMsg('cat-modal-error', '⚠️ Please select a type (Tangible/Non-Tangible).'); return; }
-    if (!mobility) { showMsg('cat-modal-error', '⚠️ Please select mobility (Moveable/Non-Moveable).'); return; }
+    if (!name) { showMsg('cat-modal-error', 'Category name is required.'); return; }
+    if (name.length < 2) { showMsg('cat-modal-error', 'Category name must be at least 2 characters.'); return; }
+    if (name.length > 50) { showMsg('cat-modal-error', 'Category name must be under 50 characters.'); return; }
+    if (!type) { showMsg('cat-modal-error', 'Please select a type (Tangible/Non-Tangible).'); return; }
+    if (!mobility) { showMsg('cat-modal-error', 'Please select mobility (Moveable/Non-Moveable).'); return; }
 
     const btn = document.getElementById('save-cat-btn');
     btn.textContent = 'Saving...';
@@ -904,7 +903,7 @@ async function saveCategory() {
         const data = await res.json();
 
         if (res.ok) {
-            showMsg('cat-modal-success', editingCatId ? '✅ Category updated!' : '✅ Category created!', 'success');
+            showMsg('cat-modal-success', editingCatId ? 'Category updated!' : 'Category created!', 'success');
             loadCategories();
             setTimeout(() => closeCategoryModal(), 1500);
         } else {
@@ -974,7 +973,6 @@ function renderAssets(assets) {
             </td>
             <td>
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <span>${a.categoryId?.icon || '📦'}</span>
                     <span style="font-size:13px;">${a.categoryName || '—'}</span>
                 </div>
             </td>
@@ -995,13 +993,13 @@ function renderAssets(assets) {
             <td style="font-size:13px; font-weight:500; color:#22c55e;">${formatCurrency(a.currentValue)}</td>
             <td>
                 <div class="asset-actions">
-                    <button class="btn btn-outline btn-sm" onclick="openDetailModal('${a._id}')" title="View Details">👁️</button>
+                    <button class="btn btn-outline btn-sm" onclick="openDetailModal('${a._id}')" title="View Details">View</button>
                     ${currentUser?.role !== 'employee' ? `
-                    <button class="btn btn-outline btn-sm" onclick="openAssignModal('${a._id}')" title="Assign">👤</button>
-                    <button class="btn btn-outline btn-sm" onclick="openEditAssetModal('${a._id}')" title="Edit">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="openAssignModal('${a._id}')" title="Assign">Assign</button>
+                    <button class="btn btn-outline btn-sm" onclick="openEditAssetModal('${a._id}')" title="Edit">Edit</button>
                     ` : ''}
                     ${currentUser?.role === 'admin' ? `
-                    <button class="btn btn-danger  btn-sm" onclick="deleteAsset('${a._id}', '${a.name.replace(/'/g, "\\'")}')" title="Delete">🗑️</button>
+                    <button class="btn btn-danger  btn-sm" onclick="deleteAsset('${a._id}', '${a.name.replace(/'/g, "\\'")}')" title="Delete">Delete</button>
                     ` : ''}
                 </div>
             </td>
@@ -1199,17 +1197,17 @@ async function saveAsset(forceCreate = false) {
     clearMsg('asset-modal-error');
     clearMsg('asset-modal-success');
 
-    if (!body.name) { showMsg('asset-modal-error', '⚠️ Device type / Asset name is required.'); return; }
-    if (body.name.length < 2) { showMsg('asset-modal-error', '⚠️ Asset name must be at least 2 characters.'); return; }
-    if (body.name.length > 100) { showMsg('asset-modal-error', '⚠️ Asset name must be under 100 characters.'); return; }
-    if (!body.categoryId) { showMsg('asset-modal-error', '⚠️ Please select a category.'); return; }
-    if (body.purchasePrice < 0) { showMsg('asset-modal-error', '⚠️ Purchase price cannot be negative.'); return; }
-    if (body.currentValue < 0) { showMsg('asset-modal-error', '⚠️ Current value cannot be negative.'); return; }
+    if (!body.name) { showMsg('asset-modal-error', 'Device type / Asset name is required.'); return; }
+    if (body.name.length < 2) { showMsg('asset-modal-error', 'Asset name must be at least 2 characters.'); return; }
+    if (body.name.length > 100) { showMsg('asset-modal-error', 'Asset name must be under 100 characters.'); return; }
+    if (!body.categoryId) { showMsg('asset-modal-error', 'Please select a category.'); return; }
+    if (body.purchasePrice < 0) { showMsg('asset-modal-error', 'Purchase price cannot be negative.'); return; }
+    if (body.currentValue < 0) { showMsg('asset-modal-error', 'Current value cannot be negative.'); return; }
     if (body.purchaseDate && body.warrantyExpiry && new Date(body.warrantyExpiry) < new Date(body.purchaseDate)) {
-        showMsg('asset-modal-error', '⚠️ Warranty expiry cannot be before purchase date.'); return;
+        showMsg('asset-modal-error', 'Warranty expiry cannot be before purchase date.'); return;
     }
     if (body.purchaseDate && new Date(body.purchaseDate) > new Date()) {
-        showMsg('asset-modal-error', '⚠️ Purchase date cannot be in the future.'); return;
+        showMsg('asset-modal-error', 'Purchase date cannot be in the future.'); return;
     }
 
     const btn = document.getElementById('save-asset-btn');
@@ -1224,17 +1222,17 @@ async function saveAsset(forceCreate = false) {
 
         if (res.ok) {
             showMsg('asset-modal-success',
-                editingAssetId ? `✅ Asset updated!` : `✅ Asset ${data.assetId} created!`, 'success');
+                editingAssetId ? `Asset updated!` : `Asset ${data.assetId} created!`, 'success');
             loadAssets();
             loadAssetStats();
             setTimeout(() => closeAssetModal(), 1500);
         } else if (res.status === 409) {
             if (data.duplicateType === 'serialNumber') {
                 showMsg('asset-modal-error',
-                    `❌ Duplicate Serial Number — Asset <strong>${data.existingAsset?.name}</strong> (${data.existingAsset?.assetId}) already uses this serial number. Please use a different serial number.`);
+                    `Duplicate Serial Number — Asset <strong>${data.existingAsset?.name}</strong> (${data.existingAsset?.assetId}) already uses this serial number. Please use a different serial number.`);
             } else if (data.duplicateType === 'name' && data.canForce) {
                 showMsg('asset-modal-error',
-                    `⚠️ ${data.message} <br><button onclick="saveAsset(true)" style="margin-top:8px; padding:6px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; cursor:pointer; font-family:system-ui; font-size:13px;">Save Anyway</button>`);
+                    `${data.message} <br><button onclick="saveAsset(true)" style="margin-top:8px; padding:6px 14px; background:#f59e0b; color:white; border:none; border-radius:6px; cursor:pointer; font-family:system-ui; font-size:13px;">Save Anyway</button>`);
             } else {
                 showMsg('asset-modal-error', data.message);
             }
@@ -1392,7 +1390,7 @@ async function confirmAssign() {
     const notes = document.getElementById('assign-notes').value.trim();
 
     clearMsg('assign-msg');
-    if (!assigningAssetId) { showMsg('assign-msg', '⚠️ No asset selected.'); return; }
+    if (!assigningAssetId) { showMsg('assign-msg', 'No asset selected.'); return; }
 
     try {
         const res = await fetch(`${BASE_URL}/api/assets/${assigningAssetId}/assign`, {
@@ -1402,7 +1400,7 @@ async function confirmAssign() {
         });
 
         if (res.ok) {
-            showMsg('assign-msg', `✅ Asset assigned to ${assignedToName || 'Unassigned'}!`, 'success');
+            showMsg('assign-msg', `Asset assigned to ${assignedToName || 'Unassigned'}!`, 'success');
             loadAssets();
             loadAssetStats();
             setTimeout(() => closeAssignModal(), 1500);
@@ -1450,7 +1448,7 @@ async function importAssetsCSV(jsonData) {
             const chunk = jsonData.slice(i, i + chunkSize);
 
             if (importBtn) {
-                importBtn.innerHTML = `⏳ Importing (${i} / ${totalAssets})...`;
+                importBtn.innerHTML = `Importing (${i} / ${totalAssets})...`;
                 importBtn.disabled = true;
             }
 
@@ -1474,7 +1472,7 @@ async function importAssetsCSV(jsonData) {
         }
 
         if (failedCount > 0) {
-            let msg = `✅ Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
+            let msg = `Bulk Import Complete!\n\nSuccessfully added: ${importedCount} assets.`;
             msg += `\nSkipped (duplicates/errors): ${failedCount} rows.`;
             msg += `\n\nSee browser console for details on skipped rows.`;
             alert(msg);
@@ -1727,7 +1725,7 @@ function renderMaintenance(records) {
             <td><span class="badge ${maintPriorityColors[r.priority]}">${r.priority}</span></td>
             <td>
                 <span class="badge ${maintStatusColors[r.status]}">${r.status}</span>
-                ${isOverdue ? '<div style="font-size:10px; color:#ef4444; margin-top:2px;">⚠️ OVERDUE</div>' : ''}
+                ${isOverdue ? '<div style="font-size:10px; color:#ef4444; margin-top:2px;">OVERDUE</div>' : ''}
             </td>
             <td style="font-size:13px; color:${isOverdue ? '#ef4444' : '#94a3b8'};">
                 ${formatDate(r.scheduledDate)}
@@ -1737,12 +1735,12 @@ function renderMaintenance(records) {
             <td>
                 <div style="display:flex; gap:4px;">
                     ${currentUser?.role !== 'employee' ? `
-                    <button class="btn btn-outline btn-sm" onclick="openEditMaintenanceModal('${r._id}')" title="Edit">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="openEditMaintenanceModal('${r._id}')" title="Edit">Edit</button>
                     ${r.status === 'pending' || r.status === 'in-progress' ? `
-                    <button class="btn btn-success btn-sm" onclick="markComplete('${r._id}')" title="Mark Complete">✅</button>` : ''}
+                    <button class="btn btn-success btn-sm" onclick="markComplete('${r._id}')" title="Mark Complete">Mark Complete</button>` : ''}
                     ` : ''}
                     ${currentUser?.role === 'admin' ? `
-                    <button class="btn btn-danger btn-sm" onclick="deleteMaintenance('${r._id}')" title="Delete">🗑️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteMaintenance('${r._id}')" title="Delete">Delete</button>
                     ` : ''}
                 </div>
             </td>
@@ -1852,7 +1850,7 @@ async function saveMaintenance() {
 
         if (res.ok) {
             showMsg('maint-modal-success',
-                editingMaintId ? '✅ Maintenance updated!' : '✅ Maintenance scheduled!', 'success');
+                editingMaintId ? 'Maintenance updated!' : 'Maintenance scheduled!', 'success');
             loadMaintenance();
             loadMaintenanceStats();
             loadAlertBadge();
@@ -1940,7 +1938,7 @@ async function loadAlerts() {
 function renderOverdue(records) {
     const el = document.getElementById('overdue-list');
     if (!records.length) {
-        el.innerHTML = '<div style="text-align:center; padding:30px;"><div style="font-size:2rem;">✅</div><p style="color:#94a3b8; font-size:14px; margin-top:8px;">No overdue maintenance!</p></div>';
+        el.innerHTML = '<div style="text-align:center; padding:30px;"><div style="font-size:2rem;"></div><p style="color:#94a3b8; font-size:14px; margin-top:8px;">No overdue maintenance!</p></div>';
         return;
     }
     el.innerHTML = records.map(r => `
@@ -1952,7 +1950,7 @@ function renderOverdue(records) {
                 <div class="alert-date">Overdue since: ${formatDate(r.scheduledDate)}</div>
             </div>
             ${currentUser?.role !== 'employee' ? `
-            <button class="btn btn-success btn-sm" onclick="markComplete('${r._id}')">✅ Done</button>
+            <button class="btn btn-success btn-sm" onclick="markComplete('${r._id}')">Done</button>
             ` : ''}
         </div>
     `).join('');
@@ -1961,12 +1959,12 @@ function renderOverdue(records) {
 function renderDueSoon(records) {
     const el = document.getElementById('duesoon-list');
     if (!records.length) {
-        el.innerHTML = '<div style="text-align:center; padding:30px;"><div style="font-size:2rem;">👍</div><p style="color:#94a3b8; font-size:14px; margin-top:8px;">Nothing due in next 7 days.</p></div>';
+        el.innerHTML = '<div style="text-align:center; padding:30px;"><div style="font-size:2rem;"></div><p style="color:#94a3b8; font-size:14px; margin-top:8px;">Nothing due in next 7 days.</p></div>';
         return;
     }
     el.innerHTML = records.map(r => `
         <div class="alert-item soon">
-            <div class="alert-icon">⏰</div>
+            <div class="alert-icon"></div>
             <div style="flex:1;">
                 <div class="alert-title">${r.title}</div>
                 <div class="alert-sub">${r.assetId?.name || r.assetName} · <span class="badge ${maintPriorityColors[r.priority]}">${r.priority}</span></div>
@@ -2150,8 +2148,8 @@ async function deleteSelectedAssets() {
 }
 
 async function truncateAllAssets() {
-    if (!confirm("⚠️ WARNING: This will permanently wipe ALL assets from the database. This cannot be undone. Are you absolutely sure?")) return;
-    if (!confirm("⚠️ DOUBLE CHECK: Are you really sure you want to empty the asset registry?")) return;
+    if (!confirm("WARNING: This will permanently wipe ALL assets from the database. This cannot be undone. Are you absolutely sure?")) return;
+    if (!confirm("DOUBLE CHECK: Are you really sure you want to empty the asset registry?")) return;
 
     try {
         const res = await fetch(`${BASE_URL}/api/assets/truncate`, {
@@ -2162,7 +2160,6 @@ async function truncateAllAssets() {
             alert("All assets have been successfully deleted.");
             const selectAllBox = document.getElementById('select-all-assets');
             if (selectAllBox) selectAllBox.checked = false;
-            // document.getElementById('select-all-assets').checked = false;
             toggleDeleteSelectedBtn();
             loadAssets();
             loadAssetStats();
@@ -2232,12 +2229,12 @@ function renderInventory(items) {
             <td>${stockBadge}</td>
             <td>
                 <div style="display:flex; gap:4px;">
-                <button class="btn btn-outline btn-sm" title="Assign Asset" onclick="openInvAssignModal('${item._id}','${item.name.replace(/'/g, "\\'")}')">🔗 Assign</button>
-                    <button class="btn btn-outline btn-sm" title="Stock In" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-in')">📥</button>
-                    <button class="btn btn-outline btn-sm" title="Stock Out" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-out')">📤</button>
-                    <button class="btn btn-outline btn-sm" title="History" onclick="openItemHistory('${item._id}','${item.name.replace(/'/g, "\\'")}')">📋</button>
-                    <button class="btn btn-outline btn-sm" title="Edit" onclick="openEditInventoryModal('${item._id}')">✏️</button>
-                    <button class="btn btn-sm" style="background:#ef4444; color:white;" title="Delete" onclick="deleteInventoryItem('${item._id}','${item.name.replace(/'/g, "\\'")}')">🗑️</button>
+                <button class="btn btn-outline btn-sm" title="Assign Asset" onclick="openInvAssignModal('${item._id}','${item.name.replace(/'/g, "\\'")}')">Assign</button>
+                    <button class="btn btn-outline btn-sm" title="Stock In" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-in')">In</button>
+                    <button class="btn btn-outline btn-sm" title="Stock Out" onclick="openStockTx('${item._id}','${item.name.replace(/'/g, "\\'")}','stock-out')">Out</button>
+                    <button class="btn btn-outline btn-sm" title="History" onclick="openItemHistory('${item._id}','${item.name.replace(/'/g, "\\'")}')">History</button>
+                    <button class="btn btn-outline btn-sm" title="Edit" onclick="openEditInventoryModal('${item._id}')">Edit</button>
+                    <button class="btn btn-sm" style="background:#ef4444; color:white;" title="Delete" onclick="deleteInventoryItem('${item._id}','${item.name.replace(/'/g, "\\'")}')">Delete</button>
                 </div>
             </td>
         </tr>`;
@@ -2314,8 +2311,8 @@ async function saveInvAssign() {
     const qty = parseInt(document.getElementById('inv-assign-qty').value) || 1;
     const notes = document.getElementById('inv-assign-notes').value.trim();
 
-    if (!userId) { alert('⚠️ Please select a user to assign to.'); return; }
-    if (qty < 1) { alert('⚠️ Quantity must be at least 1.'); return; }
+    if (!userId) { alert('Please select a user to assign to.'); return; }
+    if (qty < 1) { alert('Quantity must be at least 1.'); return; }
 
     const btn = document.getElementById('inv-assign-save-btn');
     btn.textContent = 'Assigning...'; btn.disabled = true;
@@ -2334,7 +2331,7 @@ async function saveInvAssign() {
 
         if (!txRes.ok) {
             const err = await txRes.json();
-            alert('❌ ' + (err.message || 'Failed to process stock-out'));
+            alert('' + (err.message || 'Failed to process stock-out'));
             return;
         }
 
@@ -2347,7 +2344,7 @@ async function saveInvAssign() {
             });
         }
 
-        alert(`✅ "${invAssignItemName}" assigned successfully!`);
+        alert(`"${invAssignItemName}" assigned successfully!`);
         closeInvAssignModal();
         loadInventory();
         if (assetId) { loadAssets(); loadAssetStats(); }
@@ -2371,7 +2368,7 @@ async function loadLowStockAlerts() {
         card.style.display = 'block';
         list.innerHTML = items.map(i =>
             `<span style="background:#1e293b; border:1px solid #ef4444; border-radius:6px; padding:6px 12px; font-size:12px; color:#e2e8f0;">
-                ⚠️ <strong>${i.name}</strong> — ${i.quantity} ${i.unit} left (reorder at ${i.reorderLevel})
+                ⚠️<strong>${i.name}</strong> — ${i.quantity} ${i.unit} left (reorder at ${i.reorderLevel})
             </span>`
         ).join('');
     } catch (e) { }
@@ -2500,9 +2497,9 @@ function updateTxLabel() {
     };
     document.getElementById('tx-qty-label').textContent = labels[type] || 'Quantity *';
     const titles = {
-        'stock-in': '📥 Stock In — Receive Goods',
-        'stock-out': '📤 Stock Out — Issue Goods',
-        'adjustment': '🔧 Stock Adjustment'
+        'stock-in': 'Stock In — Receive Goods',
+        'stock-out': 'Stock Out — Issue Goods',
+        'adjustment': 'Stock Adjustment'
     };
     document.getElementById('tx-modal-title').textContent = titles[type] || 'Transaction';
 }
@@ -2527,7 +2524,7 @@ async function confirmStockTx() {
     msgEl.style.display = 'none';
 
     const btn = document.getElementById('confirm-tx-btn');
-    btn.textContent = '⏳ Processing...'; btn.disabled = true;
+    btn.textContent = 'Processing...'; btn.disabled = true;
 
     try {
         const res = await fetch(`${BASE_URL}/api/inventory/${currentTxItemId}/transaction`, {
@@ -2547,11 +2544,11 @@ async function confirmStockTx() {
         msgEl.textContent = 'Could not connect to server.';
         msgEl.style.display = 'block';
     }
-    btn.textContent = '✅ Confirm'; btn.disabled = false;
+    btn.textContent = 'Confirm'; btn.disabled = false;
 }
 
 async function openItemHistory(itemId, itemName) {
-    document.getElementById('inv-history-title').textContent = `📋 ${itemName} — Transaction History`;
+    document.getElementById('inv-history-title').textContent = `${itemName} — Transaction History`;
     document.getElementById('inv-history-list').innerHTML = '<p style="color:#94a3b8; text-align:center; padding:20px;">Loading...</p>';
     document.getElementById('inv-history-modal').style.display = 'flex';
 
@@ -2566,7 +2563,7 @@ async function openItemHistory(itemId, itemName) {
         }
         list.innerHTML = txs.map(tx => {
             const typeColor = tx.type === 'stock-in' ? '#22c55e' : tx.type === 'stock-out' ? '#ef4444' : '#f59e0b';
-            const typeIcon = tx.type === 'stock-in' ? '📥' : tx.type === 'stock-out' ? '📤' : '🔧';
+            const typeIcon = tx.type === 'stock-in' ? '' : tx.type === 'stock-out' ? '' : '';
             const typeLabel = tx.type === 'stock-in' ? 'Stock In' : tx.type === 'stock-out' ? 'Stock Out' : 'Adjustment';
             return `<div style="border-bottom:1px solid #1e293b; padding:12px 0; display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
@@ -2589,7 +2586,7 @@ async function openItemHistory(itemId, itemName) {
 }
 
 async function loadInventoryTransactions() {
-    document.getElementById('inv-history-title').textContent = '📋 All Inventory Transactions';
+    document.getElementById('inv-history-title').textContent = 'All Inventory Transactions';
     document.getElementById('inv-history-list').innerHTML = '<p style="color:#94a3b8; text-align:center; padding:20px;">Loading...</p>';
     document.getElementById('inv-history-modal').style.display = 'flex';
 
@@ -2608,7 +2605,7 @@ async function loadInventoryTransactions() {
         }
         list.innerHTML = txs.map(tx => {
             const typeColor = tx.type === 'stock-in' ? '#22c55e' : tx.type === 'stock-out' ? '#ef4444' : '#f59e0b';
-            const typeIcon = tx.type === 'stock-in' ? '📥' : tx.type === 'stock-out' ? '📤' : '🔧';
+            const typeIcon = tx.type === 'stock-in' ? '' : tx.type === 'stock-out' ? '' : '';
             const typeLabel = tx.type === 'stock-in' ? 'Stock In' : tx.type === 'stock-out' ? 'Stock Out' : 'Adjustment';
             return `
             <div style="border-bottom:1px solid #1e293b; padding:12px 0; display:flex; justify-content:space-between; align-items:flex-start;">
@@ -2730,7 +2727,7 @@ function renderDepreciation(records) {
             <td style="font-size:12px; color:#94a3b8;">${r.calculatedByName || '—'}</td>
             <td>
                 ${currentUser?.role === 'admin' ? `
-                <button class="btn btn-danger btn-sm" onclick="deleteDepreciation('${r._id}')">🗑️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteDepreciation('${r._id}')">Delete</button>
                 ` : '—'}
             </td>
         </tr>
@@ -2755,7 +2752,7 @@ async function bulkCalculate() {
     if (!confirm(`Calculate ${method} depreciation at ${rate}% for all active assets for year ${year}?`)) return;
 
     const btn = document.getElementById('bulk-calc-btn');
-    btn.textContent = '⏳ Calculating...';
+    btn.textContent = 'Calculating...';
     btn.disabled = true;
     msgEl.innerHTML = '';
 
@@ -2767,7 +2764,7 @@ async function bulkCalculate() {
         const data = await res.json();
 
         if (res.ok) {
-            msgEl.innerHTML = `<div class="success-msg">✅ ${data.message}</div>`;
+            msgEl.innerHTML = `<div class="success-msg">${data.message}</div>`;
             loadDepreciation();
             loadDepreciationSummary();
         } else {
@@ -2776,7 +2773,7 @@ async function bulkCalculate() {
     } catch (err) {
         msgEl.innerHTML = '<div class="error-msg">Could not connect to server.</div>';
     } finally {
-        btn.textContent = '⚡ Calculate All';
+        btn.textContent = 'Calculate All';
         btn.disabled = false;
     }
 }
@@ -2860,7 +2857,7 @@ async function saveSingleDepreciation() {
 
         if (res.ok) {
             showMsg('sd-msg-success',
-                `✅ Depreciation calculated! ${formatCurrency(data.depreciationAmount)} depreciated.`, 'success');
+                `Depreciation calculated! ${formatCurrency(data.depreciationAmount)} depreciated.`, 'success');
             loadDepreciation();
             loadDepreciationSummary();
             setTimeout(() => closeSingleDepreciationModal(), 1800);
@@ -2949,16 +2946,16 @@ function renderInsurance(records) {
                 <div style="font-size:13px; color:${r.status === 'expired' ? '#ef4444' : isExpiring ? '#f59e0b' : '#94a3b8'};">
                     ${formatDate(r.expiryDate)}
                 </div>
-                ${isExpiring ? `<div style="font-size:10px; color:#f59e0b;">⚠️ ${daysLeft} days left</div>` : ''}
+                ${isExpiring ? `<div style="font-size:10px; color:#f59e0b;">${daysLeft} days left</div>` : ''}
             </td>
             <td><span class="badge badge-${r.status}">${r.status}</span></td>
             <td>
                 <div style="display:flex; gap:4px;">
                     ${currentUser?.role !== 'employee' ? `
-                    <button class="btn btn-outline btn-sm" onclick="openEditInsuranceModal('${r._id}')" title="Edit">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="openEditInsuranceModal('${r._id}')" title="Edit">Edit</button>
                     ` : ''}
                     ${currentUser?.role === 'admin' ? `
-                    <button class="btn btn-danger btn-sm" onclick="deleteInsurance('${r._id}')" title="Delete">🗑️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteInsurance('${r._id}')" title="Delete">Delete</button>
                     ` : ''}
                 </div>
             </td>
@@ -3055,7 +3052,7 @@ async function saveInsurance() {
 
         if (res.ok) {
             showMsg('ins-modal-success',
-                editingInsId ? '✅ Policy updated!' : '✅ Policy added!', 'success');
+                editingInsId ? 'Policy updated!' : 'Policy added!', 'success');
             loadInsurance();
             loadInsuranceBadge();
             setTimeout(() => closeInsuranceModal(), 1500);
@@ -3292,7 +3289,7 @@ function selectReviewAsset(id, label) {
     document.getElementById('review-req-asset-search').value = '';
     document.getElementById('review-req-asset-list').style.display = 'none';
     const sel = document.getElementById('review-req-asset-selected');
-    sel.textContent = '✅ Selected: ' + label;
+    sel.textContent = 'Selected: ' + label;
     sel.style.display = 'block';
 }
 
@@ -3337,7 +3334,7 @@ async function loadAudits() {
                     <span class="badge ${a.status === 'open' ? 'badge-pending' : 'badge-active'}">${a.status}</span>
                 </div>
                 <div style="font-size:12px; color:var(--text-secondary); margin-top:8px;">Started: ${new Date(a.createdAt).toLocaleDateString()}</div>
-                <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="openAuditScanner('${a._id}')">📷 Scan / Verify Assets</button>
+                <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="openAuditScanner('${a._id}')">Scan / Verify Assets</button>
             </div>
         `).join('');
     }
@@ -3363,8 +3360,8 @@ async function openAuditScanner(auditId) {
             <td><span class="badge ${i.status === 'verified' ? 'badge-active' : i.status === 'pending' ? 'badge-pending' : 'badge-lost'}">${i.status}</span></td>
             <td>
                 ${i.status === 'pending' ? `
-                <button class="btn btn-success btn-sm" onclick="verifyAuditItem('${i._id}', 'verified')">Found ✅</button>
-                <button class="btn btn-danger btn-sm" onclick="verifyAuditItem('${i._id}', 'missing')">Missing ❌</button>
+                <button class="btn btn-success btn-sm" onclick="verifyAuditItem('${i._id}', 'verified')">Found</button>
+                <button class="btn btn-danger btn-sm" onclick="verifyAuditItem('${i._id}', 'missing')">Missing</button>
                 ` : i.auditedAt ? new Date(i.auditedAt).toLocaleString() : ''}
             </td>
         </tr>
@@ -3411,7 +3408,7 @@ const _eqShowPage = showPage;
 showPage = function (page) {
     _eqShowPage(page);
     if (page === 'equipment') {
-        document.getElementById('page-title').textContent = '📖 Equipment Master';
+        document.getElementById('page-title').textContent = 'Equipment Master';
         loadEquipmentMaster();
     }
 };
@@ -3464,10 +3461,10 @@ function renderEquipmentMaster(eqs) {
                 <span style="font-size:11px;color:#94a3b8;">(manufacturer code)</span></td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
-                <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">✏️</button>
+                <button class="btn btn-outline btn-sm" onclick="openEqModal('${eq._id}')">Edit</button>
                 ` : ''}
                 ${currentUser?.role === 'admin' ? `
-                <button class="btn btn-danger btn-sm" onclick="deleteEq('${eq._id}')">🗑️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEq('${eq._id}')">Delete</button>
                 ` : ''}
             </td>
         </tr>
@@ -3488,10 +3485,10 @@ function renderDeviceTypes(dts) {
             <td style="color:#4f6ef7; font-weight:500;">${dt.depreciationRate != null ? dt.depreciationRate + '%' : '<span style="color:#94a3b8;">—</span>'}</td>
             <td>
                 ${currentUser?.role !== 'employee' ? `
-                <button class="btn btn-outline btn-sm" onclick="openDtModal('${dt._id}')">✏️</button>
+                <button class="btn btn-outline btn-sm" onclick="openDtModal('${dt._id}')">Edit</button>
                 ` : ''}
                 ${currentUser?.role === 'admin' ? `
-                <button class="btn btn-danger btn-sm" onclick="deleteDt('${dt._id}')">🗑️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteDt('${dt._id}')">Delete</button>
                 ` : ''}
             </td>
         </tr>
@@ -3528,7 +3525,7 @@ async function saveDt() {
     const depreciationRate = deprRateRaw !== '' ? parseFloat(deprRateRaw) : null;
 
     if (!shortCode || !fullName) {
-        alert('⚠️ Both Short Code and Full Name are required.');
+        alert('Both Short Code and Full Name are required.');
         return;
     }
 
@@ -3558,7 +3555,7 @@ async function saveDt() {
 }
 
 async function deleteDt(id) {
-    if (!confirm('⚠️ Delete this device type?')) return;
+    if (!confirm('Delete this device type?')) return;
     try {
         await fetch(`${BASE_URL}/api/device-types/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadEquipmentMaster();
@@ -3567,7 +3564,7 @@ async function deleteDt(id) {
 
 async function renumberAssetIds() {
     if (!confirm(
-        '⚠️ Re-number ALL Asset IDs?\n\n' +
+        'Re-number ALL Asset IDs?\n\n' +
         'This will reassign sequential numbers (0001, 0002...) to all existing assets grouped by their device type and manufacturer.\n\n' +
         'This fixes old assets that have random or incorrect numbers.\n\n' +
         'Proceed?'
@@ -3583,16 +3580,16 @@ async function renumberAssetIds() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert(`✅ ${data.message}`);
+            alert(`${data.message}`);
             loadAssets();
         } else {
-            alert('❌ ' + (data.message || 'Failed to renumber'));
+            alert('' + (data.message || 'Failed to renumber'));
         }
     } catch (e) {
         console.error(e);
         alert('Connection error');
     } finally {
-        if (btn) { btn.textContent = '🔢 Re-number Asset IDs'; btn.disabled = false; }
+        if (btn) { btn.textContent = 'Re-number Asset IDs'; btn.disabled = false; }
     }
 }
 
@@ -3667,7 +3664,7 @@ async function saveEq() {
     };
 
     if (!body.manufacturer || !body.productCode) {
-        alert("⚠️ Manufacturer (OEM) and Product Code are required.");
+        alert("Manufacturer (OEM) and Product Code are required.");
         return;
     }
 
@@ -3696,7 +3693,7 @@ async function saveEq() {
 }
 
 async function deleteEq(id) {
-    if (!confirm("⚠️ Delete this equipment from the master catalog?")) return;
+    if (!confirm("Delete this equipment from the master catalog?")) return;
     try {
         await fetch(`${BASE_URL}/api/equipment-master/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadEquipmentMaster();
@@ -3707,7 +3704,7 @@ const _eqSettingsShowPage = showPage;
 showPage = function (page) {
     _eqSettingsShowPage(page);
     if (page === 'equipment') {
-        document.getElementById('page-title').textContent = '⚙️ Master Data Settings';
+        document.getElementById('page-title').textContent = 'Master Data Settings';
         loadEquipmentMaster();
         loadCategories();
         loadLocations();
@@ -3743,7 +3740,7 @@ function renderLocations() {
             <td>${loc.description || '—'}</td>
             <td>
                 ${currentUser?.role === 'admin' ? `
-                <button class="btn btn-danger btn-sm" onclick="deleteLocation('${loc._id}')">🗑️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteLocation('${loc._id}')">Delete</button>
                 ` : ''}
             </td>
         </tr>
@@ -3782,7 +3779,7 @@ async function saveLocation() {
 }
 
 async function deleteLocation(id) {
-    if (!confirm('⚠️ Are you sure you want to delete this location?')) return;
+    if (!confirm('Are you sure you want to delete this location?')) return;
     try {
         await fetch(`${BASE_URL}/api/locations/${id}`, { method: 'DELETE', headers: authHdrs() });
         loadLocations();

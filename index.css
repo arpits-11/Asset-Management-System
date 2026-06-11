@@ -162,15 +162,7 @@ body {
 }
 
 .auth-feature-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: rgba(79, 110, 247, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
+    display: none;
 }
 
 .auth-right {
@@ -423,7 +415,7 @@ body {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0px;
     padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -450,9 +442,7 @@ body {
 }
 
 .nav-item .icon {
-    font-size: 18px;
-    width: 24px;
-    text-align: center;
+    display: none;
 }
 
 .nav-badge {
@@ -562,7 +552,8 @@ body {
     border-radius: 12px;
     padding: 20px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
     gap: 16px;
     transition: transform 0.2s;
 }
@@ -572,14 +563,7 @@ body {
 }
 
 .stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
+    display: none;
 }
 
 .stat-icon.blue {
@@ -603,15 +587,16 @@ body {
 }
 
 .stat-value {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     line-height: 1;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .stat-label {
     font-size: 13px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .card {
@@ -927,19 +912,11 @@ tr:hover td {
 .category-card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0px;
 }
 
 .category-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: rgba(79, 110, 247, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
+    display: none;
 }
 
 .category-name {
@@ -1027,9 +1004,7 @@ tr:hover td {
 }
 
 .history-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
+    display: none;
 }
 
 .history-text {
@@ -1164,9 +1139,7 @@ tr:hover td {
 }
 
 .alert-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
+    display: none;
 }
 
 .alert-title {

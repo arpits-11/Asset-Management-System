@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asset Management System</title>
-    <link rel="stylesheet" href="index.css?v=5">
+    <link rel="stylesheet" href="index.css?v=6">
     <style>
         @keyframes spin {
             to {
@@ -26,23 +26,17 @@
                 <h1>AssetMS</h1>
                 <p>Complete Project Asset Management System for modern organizations</p>
 
-                <div class="auth-features">
-                    <div class="auth-feature">
-                        <div class="auth-feature-icon"></div>
-                        <span>Track all types of assets — moveable, non-moveable, tangible & non-tangible</span>
-                    </div>
-                    <div class="auth-feature">
-                        <div class="auth-feature-icon"></div>
-                        <span>Role-based access for Admin, Manager & Employee</span>
-                    </div>
-                    <div class="auth-feature">
-                        <div class="auth-feature-icon"></div>
-                        <span>Real-time dashboard with analytics & reports</span>
-                    </div>
-                    <div class="auth-feature">
-                        <div class="auth-feature-icon"></div>
-                        <span>Maintenance alerts, depreciation tracking & audit logs</span>
-                    </div>
+                <div class="auth-feature">
+                    <span>Track all types of assets — moveable, non-moveable, tangible & non-tangible</span>
+                </div>
+                <div class="auth-feature">
+                    <span>Role-based access for Admin, Manager & Employee</span>
+                </div>
+                <div class="auth-feature">
+                    <span>Real-time dashboard with analytics & reports</span>
+                </div>
+                <div class="auth-feature">
+                    <span>Maintenance alerts, depreciation tracking & audit logs</span>
                 </div>
             </div>
 
@@ -209,7 +203,7 @@
                         </div>
                     </div>
                     <button class="btn btn-outline" style="width:100%; font-size:13px;" onclick="logout()">
-                         Sign Out
+                        Sign Out
                     </button>
                 </div>
             </aside>
@@ -243,46 +237,28 @@
                     <div class="page active" id="page-dashboard">
                         <div class="stats-grid">
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-total-users">0</div>
-                                    <div class="stat-label">Total Users</div>
-                                </div>
+                                <div class="stat-value" id="stat-total-users">0</div>
+                                <div class="stat-label">Total Users</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-active-users">0</div>
-                                    <div class="stat-label">Active Users</div>
-                                </div>
+                                <div class="stat-value" id="stat-active-users">0</div>
+                                <div class="stat-label">Active Users</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-managers">0</div>
-                                    <div class="stat-label">Managers</div>
-                                </div>
+                                <div class="stat-value" id="stat-managers">0</div>
+                                <div class="stat-label">Managers</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-pending">0</div>
-                                    <div class="stat-label">Pending Approvals</div>
-                                </div>
+                                <div class="stat-value" id="stat-pending">0</div>
+                                <div class="stat-label">Pending Approvals</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon purple"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-total-assets">0</div>
-                                    <div class="stat-label">Total Assets</div>
-                                </div>
+                                <div class="stat-value" id="stat-total-assets">0</div>
+                                <div class="stat-label">Total Assets</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
-                                    <div class="stat-value" id="stat-active-assets">0</div>
-                                    <div class="stat-label">Active Assets</div>
-                                </div>
+                                <div class="stat-value" id="stat-active-assets">0</div>
+                                <div class="stat-label">Active Assets</div>
                             </div>
                         </div>
 
@@ -293,7 +269,7 @@
                             <div class="card">
                                 <div class="card-header">
                                     <span class="card-title">Recent Activity</span>
-                                    <button class="btn btn-outline btn-sm" onclick="loadDashboard()">🔄</button>
+                                    <button class="btn btn-outline btn-sm" onclick="loadDashboard()">Refresh</button>
                                 </div>
                                 <div id="dashboard-activity">
                                     <p style="color:#94a3b8; text-align:center; padding:20px; font-size:14px;">
@@ -364,7 +340,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <span class="card-title">Pending SignIn Approvals</span>
-                                <button class="btn btn-outline btn-sm" onclick="loadPendingUsers()">🔄
+                                <button class="btn btn-outline btn-sm" onclick="loadPendingUsers()">
                                     Refresh</button>
                             </div>
                             <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">
@@ -384,7 +360,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <span class="card-title">Full Activity Log</span>
-                                <button class="btn btn-outline btn-sm" onclick="loadActivity()">🔄 Refresh</button>
+                                <button class="btn btn-outline btn-sm" onclick="loadActivity()">Refresh</button>
                             </div>
                             <div id="activity-log-list">
                                 <p style="color:#94a3b8; text-align:center; padding:40px; font-size:14px;">
@@ -397,32 +373,20 @@
                     <div class="page" id="page-inventory">
                         <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
-                                    <div class="stat-value" id="inv-total">0</div>
-                                    <div class="stat-label">Total Items</div>
-                                </div>
+                                <div class="stat-value" id="inv-total">0</div>
+                                <div class="stat-label">Total Items</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
-                                    <div class="stat-value" id="inv-low">0</div>
-                                    <div class="stat-label">Low Stock</div>
-                                </div>
+                                <div class="stat-value" id="inv-low">0</div>
+                                <div class="stat-label">Low Stock</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
-                                    <div class="stat-value" id="inv-out">0</div>
-                                    <div class="stat-label">Out of Stock</div>
-                                </div>
+                                <div class="stat-value" id="inv-out">0</div>
+                                <div class="stat-label">Out of Stock</div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
-                                    <div class="stat-value" id="inv-value">0</div>
-                                    <div class="stat-label">Total Value</div>
-                                </div>
+                                <div class="stat-value" id="inv-value">0</div>
+                                <div class="stat-label">Total Value</div>
                             </div>
                         </div>
 
@@ -490,39 +454,24 @@
                         <!-- Asset Stats -->
                         <div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="ast-total">0</div>
                                     <div class="stat-label">Total Assets</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="ast-active">0</div>
                                     <div class="stat-label">Active</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="ast-repair">0</div>
                                     <div class="stat-label">In Repair</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon purple"></div>
-                                <div>
                                     <div class="stat-value" id="ast-assigned">0</div>
                                     <div class="stat-label">Assigned</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="ast-value">₹0</div>
                                     <div class="stat-label">Total Value</div>
-                                </div>
                             </div>
                         </div>
 
@@ -601,39 +550,24 @@
                     <div class="page" id="page-maintenance">
                         <div class="stats-grid" style="grid-template-columns:repeat(5,1fr); margin-bottom:24px;">
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="m-total">0</div>
                                     <div class="stat-label">Total Records</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="m-pending">0</div>
                                     <div class="stat-label">Pending</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="m-inprogress">0</div>
                                     <div class="stat-label">In Progress</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="m-overdue">0</div>
                                     <div class="stat-label">Overdue</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="m-cost">₹0</div>
                                     <div class="stat-label">Total Cost</div>
-                                </div>
                             </div>
                         </div>
 
@@ -732,32 +666,21 @@
                     <div class="page" id="page-reports">
                         <div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:24px;">
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
+
                                     <div class="stat-value" id="r-purchase" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Purchase Value</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="r-current" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Current Value</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="r-depr" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Depreciation</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="r-maint" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Maintenance Cost</div>
-                                </div>
                             </div>
                         </div>
 
@@ -837,25 +760,16 @@
 
                         <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px;">
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="d-total" style="font-size:1.3rem;">₹0</div>
                                     <div class="stat-label">Total Depreciated</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="d-records">0</div>
                                     <div class="stat-label">Total Records</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="d-retention" style="font-size:1.3rem;">0%</div>
                                     <div class="stat-label">Value Retained</div>
-                                </div>
                             </div>
                         </div>
 
@@ -900,32 +814,20 @@
                     <div class="page" id="page-insurance">
                         <div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:20px;">
                             <div class="stat-card">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="ins-active">0</div>
                                     <div class="stat-label">Active Policies</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="ins-expired">0</div>
                                     <div class="stat-label">Expired</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="ins-premium" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Annual Premium</div>
-                                </div>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="ins-coverage" style="font-size:1.2rem;">₹0</div>
                                     <div class="stat-label">Total Coverage</div>
-                                </div>
                             </div>
                         </div>
 
@@ -973,54 +875,36 @@
                     <div class="page" id="page-finance">
                         <div class="stats-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:24px;">
                             <div class="stat-card" style="border-left:3px solid #4f6ef7;">
-                                <div class="stat-icon blue"></div>
-                                <div>
                                     <div class="stat-value" id="fin-purchase" style="font-size:1.2rem; color:#4f6ef7;">
                                         ₹0</div>
                                     <div class="stat-label">Total Purchase Value</div>
-                                </div>
                             </div>
                             <div class="stat-card" style="border-left:3px solid #22c55e;">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="fin-current" style="font-size:1.2rem; color:#22c55e;">₹0
                                     </div>
                                     <div class="stat-label">Current Book Value</div>
-                                </div>
                             </div>
                             <div class="stat-card" style="border-left:3px solid #ef4444;">
-                                <div class="stat-icon red"></div>
-                                <div>
                                     <div class="stat-value" id="fin-depr" style="font-size:1.2rem; color:#ef4444;">
                                         ₹0
                                     </div>
                                     <div class="stat-label">Total Depreciation</div>
-                                </div>
                             </div>
                             <div class="stat-card" style="border-left:3px solid #f59e0b;">
-                                <div class="stat-icon yellow"></div>
-                                <div>
                                     <div class="stat-value" id="fin-maint" style="font-size:1.2rem; color:#f59e0b;">
                                         ₹0
                                     </div>
                                     <div class="stat-label">Maintenance Costs</div>
-                                </div>
                             </div>
                             <div class="stat-card" style="border-left:3px solid #22c55e;">
-                                <div class="stat-icon green"></div>
-                                <div>
                                     <div class="stat-value" id="fin-ins-prem" style="font-size:1.2rem; color:#22c55e;">
                                         ₹0</div>
                                     <div class="stat-label">Insurance Premium</div>
-                                </div>
                             </div>
                             <div class="stat-card" style="border-left:3px solid #818cf8;">
-                                <div class="stat-icon purple"></div>
-                                <div>
                                     <div class="stat-value" id="fin-ins-cov" style="font-size:1.2rem; color:#818cf8;">₹0
                                     </div>
                                     <div class="stat-label">Insurance Coverage</div>
-                                </div>
                             </div>
                         </div>
 
@@ -1995,7 +1879,7 @@
         </div>
     </div>
 
-    <script src="index.js?v=44"></script>
+    <script src="index.js?v=45"></script>
 </body>
 
 </html>
