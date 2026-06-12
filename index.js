@@ -2743,6 +2743,7 @@ async function bulkCalculate() {
     const method = document.getElementById('bulk-method').value;
     const rate = document.getElementById('bulk-rate').value;
     const msgEl = document.getElementById('bulk-msg');
+    const btn = document.getElementById('bulk-calc-btn');
 
     const rateVal = rate !== '' ? parseFloat(rate) : null;
     if (rateVal !== null && (rateVal < 0 || rateVal > 100)) {
@@ -2750,30 +2751,50 @@ async function bulkCalculate() {
         return;
     }
 
-    if (!confirm(`Calculate ${method} depreciation at ${rate}% for all active assets for year ${year}?`)) return;
+    if (!confirm(`Calculate ${method} depreciation at ${rate || 'device-type'}% for all active assets for year ${year}?`)) return;
 
-    const btn = document.getElementById('bulk-calc-btn');
     btn.textContent = 'Calculating...';
     btn.disabled = true;
     msgEl.innerHTML = '';
 
+    let counter = 0;
+    const counterInterval = setInterval(() => {
+        counter++;
+        btn.textContent = `Calculating... (${counter}s)`;
+    }, 1000);
+
+    msgEl.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+            <div style="width:18px; height:18px; border:2px solid #4f6ef7; border-top-color:transparent; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0;"></div>
+            <span style="color:#94a3b8; font-size:13px;" id="bulk-progress-text">Processing assets, please wait...</span>
+        </div>`;
+
     try {
         const res = await fetch(`${BASE_URL}/api/depreciation/bulk`, {
             method: 'POST', headers: authHdrs(),
-            body: JSON.stringify({ method, rate: parseFloat(rate), year: parseInt(year) })
+            body: JSON.stringify({ method, rate: parseFloat(rate) || 0, year: parseInt(year) })
         });
         const data = await res.json();
 
+        clearInterval(counterInterval);
+
         if (res.ok) {
-            msgEl.innerHTML = `<div class="success-msg">${data.message}</div>`;
+            msgEl.innerHTML = `
+                <div class="success-msg" style="font-size:14px;">
+                    Depreciation complete in ${counter}s —
+                    <strong>${data.count}</strong> assets processed,
+                    <strong>${data.skipped}</strong> skipped.
+                </div>`;
             loadDepreciation();
             loadDepreciationSummary();
         } else {
             msgEl.innerHTML = `<div class="error-msg">${data.message}</div>`;
         }
     } catch (err) {
+        clearInterval(counterInterval);
         msgEl.innerHTML = '<div class="error-msg">Could not connect to server.</div>';
     } finally {
+        clearInterval(counterInterval);
         btn.textContent = 'Calculate All';
         btn.disabled = false;
     }

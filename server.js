@@ -1705,51 +1705,88 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
         if (!method || !year)
             return res.status(400).json({ message: 'Method and year are required' });
 
-        const assets = await Asset.find({ status: { $in: ['active', 'in-repair', 'assigned'] } });
+        const parsedYear = parseInt(year);
+        const fallbackRate = parseFloat(rate) || 0;
         const user = await User.findById(req.userId);
-        const deviceTypes = await DeviceType.find({});
+
+        const [assets, deviceTypes, existingRecords] = await Promise.all([
+            Asset.find(
+                { status: { $in: ['active', 'in-repair', 'assigned'] } },
+                'name assetId currentValue purchasePrice'
+            ).lean(),
+            DeviceType.find({}, 'shortCode fullName depreciationRate').lean(),
+            Depreciation.find({ year: parsedYear }, 'assetId').lean()
+        ]);
+
+        const dtByFull  = {};
         const dtByShort = {};
-        const dtByFull = {};
         deviceTypes.forEach(dt => {
+            dtByFull[dt.fullName.toLowerCase()]   = dt;
             dtByShort[dt.shortCode.toUpperCase()] = dt;
-            dtByFull[dt.fullName.toLowerCase()] = dt;
         });
-        const results = [];
+
+        const alreadyDone = new Set(existingRecords.map(r => r.assetId.toString()));
+
+        const toInsert   = [];
+        const assetUpdates = [];
         let skipped = 0;
 
         for (const asset of assets) {
-            const existing = await Depreciation.findOne({ assetId: asset._id, year: parseInt(year) });
-            if (existing) { skipped++; continue; }
+            if (alreadyDone.has(asset._id.toString())) { skipped++; continue; }
 
             const openingValue = asset.currentValue || asset.purchasePrice || 0;
             if (openingValue <= 0) { skipped++; continue; }
 
             const assetName = (asset.name || '').trim();
-            const dtMatch = dtByFull[assetName.toLowerCase()] || dtByShort[assetName.toUpperCase()];
-            const effectiveRate = (dtMatch && dtMatch.depreciationRate != null && dtMatch.depreciationRate > 0)
-                ? dtMatch.depreciationRate
-                : parseFloat(rate) || 0;
+            const dtMatch = dtByFull[assetName.toLowerCase()]
+                         || dtByShort[assetName.toUpperCase()];
+
+            const effectiveRate =
+                (dtMatch && dtMatch.depreciationRate != null && dtMatch.depreciationRate > 0)
+                    ? dtMatch.depreciationRate
+                    : fallbackRate;
 
             if (!effectiveRate || effectiveRate <= 0) { skipped++; continue; }
 
             const { amount, closingValue } = calculateDepreciation(method, openingValue, effectiveRate);
-            const record = new Depreciation({
-                assetId: asset._id, assetName: asset.name, assetCode: asset.assetId,
-                year: parseInt(year), method,
-                openingValue, depreciationRate: effectiveRate,
-                depreciationAmount: amount, closingValue,
-                calculatedBy: req.userId, calculatedByName: user.name
+
+            toInsert.push({
+                assetId: asset._id,
+                assetName: asset.name,
+                assetCode: asset.assetId,
+                year: parsedYear,
+                method,
+                openingValue,
+                depreciationRate: effectiveRate,
+                depreciationAmount: amount,
+                closingValue,
+                calculatedBy: req.userId,
+                calculatedByName: user.name
             });
-            await record.save();
-            await Asset.findByIdAndUpdate(asset._id, { currentValue: closingValue, updatedAt: new Date() });
-            results.push(record);
+
+            assetUpdates.push({
+                updateOne: {
+                    filter: { _id: asset._id },
+                    update: { $set: { currentValue: closingValue, updatedAt: new Date() } }
+                }
+            });
         }
 
+        if (toInsert.length > 0) {
+            await Depreciation.insertMany(toInsert, { ordered: false });
+            await Asset.bulkWrite(assetUpdates, { ordered: false });
+        }
+        
         await logActivity(req.userId, user.name, 'bulk_depreciation',
-            `Bulk depreciation Year ${year}: ${results.length} assets processed, ${skipped} skipped`);
+            `Bulk depreciation Year ${year}: ${toInsert.length} assets processed, ${skipped} skipped`);
 
-        res.json({ message: `Depreciation calculated for ${results.length} assets. ${skipped} skipped.`, count: results.length, skipped });
+        res.json({
+            message: `Depreciation calculated for ${toInsert.length} assets. ${skipped} skipped.`,
+            count: toInsert.length,
+            skipped
+        });
     } catch (err) {
+        console.error('Bulk depreciation error:', err);
         res.status(500).json({ message: 'Server error', error: err.message });
     }
 });
