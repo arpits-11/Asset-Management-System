@@ -1706,7 +1706,7 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
             return res.status(400).json({ message: 'Method and year are required' });
 
         const parsedYear = parseInt(year);
-        const fallbackRate = parseFloat(rate) || 0;
+        const fallbackRate = (rate !== '' && rate != null) ? parseFloat(rate) : null;
         const user = await User.findById(req.userId);
 
         const [assets, deviceTypes, existingRecords] = await Promise.all([
@@ -1718,16 +1718,16 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
             Depreciation.find({ year: parsedYear }, 'assetId').lean()
         ]);
 
-        const dtByFull  = {};
+        const dtByFull = {};
         const dtByShort = {};
         deviceTypes.forEach(dt => {
-            dtByFull[dt.fullName.toLowerCase()]   = dt;
+            dtByFull[dt.fullName.toLowerCase()] = dt;
             dtByShort[dt.shortCode.toUpperCase()] = dt;
         });
 
         const alreadyDone = new Set(existingRecords.map(r => r.assetId.toString()));
 
-        const toInsert   = [];
+        const toInsert = [];
         const assetUpdates = [];
         let skipped = 0;
 
@@ -1739,17 +1739,14 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
 
             const assetName = (asset.name || '').trim();
             const dtMatch = dtByFull[assetName.toLowerCase()]
-                         || dtByShort[assetName.toUpperCase()];
+                || dtByShort[assetName.toUpperCase()];
 
-            const effectiveRate =
-                (dtMatch && dtMatch.depreciationRate != null && dtMatch.depreciationRate > 0)
-                    ? dtMatch.depreciationRate
-                    : fallbackRate;
+            const dtRate = (dtMatch && dtMatch.depreciationRate != null) ? dtMatch.depreciationRate : null;
+            const effectiveRate = dtRate !== null ? dtRate : fallbackRate;
 
-            if (!effectiveRate || effectiveRate <= 0) { skipped++; continue; }
+            if (effectiveRate == null) { skipped++; continue; }
 
             const { amount, closingValue } = calculateDepreciation(method, openingValue, effectiveRate);
-
             toInsert.push({
                 assetId: asset._id,
                 assetName: asset.name,
@@ -1776,7 +1773,7 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
             await Depreciation.insertMany(toInsert, { ordered: false });
             await Asset.bulkWrite(assetUpdates, { ordered: false });
         }
-        
+
         await logActivity(req.userId, user.name, 'bulk_depreciation',
             `Bulk depreciation Year ${year}: ${toInsert.length} assets processed, ${skipped} skipped`);
 
@@ -1833,6 +1830,18 @@ app.get('/api/depreciation/summary', authMiddleware, async (req, res) => {
             totalPurchaseValue: assetValues[0]?.purchase || 0,
             totalCurrentValue: assetValues[0]?.current || 0
         });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.delete('/api/depreciation/truncate', authMiddleware, requireRole('admin'), async (req, res) => {
+    try {
+        const result = await Depreciation.deleteMany({});
+        const user = await User.findById(req.userId);
+        await logActivity(req.userId, user?.name || 'Admin', 'truncate_depreciation',
+            `Truncated all depreciation records (${result.deletedCount} deleted)`);
+        res.json({ message: `All ${result.deletedCount} depreciation records deleted.` });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }

@@ -772,6 +772,14 @@
                             </div>
                         </div>
 
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+                            <input type="text" id="depr-search" placeholder="Search by asset name or code..."
+                                oninput="filterDepreciation()"
+                                style="flex:1; min-width:220px; padding:9px 14px; background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:14px; font-family:system-ui;">
+                            <button class="btn btn-danger btn-sm" onclick="truncateAllDepreciation()"
+                                style="white-space:nowrap;">Truncate All Records</button>
+                        </div>
+
                         <div class="card">
                             <div class="card-header">
                                 <span class="card-title">Depreciation Records</span>
@@ -1877,7 +1885,7 @@
         </div>
     </div>
 
-    <script src="index.js?v=50"></script>
+    <script src="index.js?v=51"></script>
 </body>
 
 </html>

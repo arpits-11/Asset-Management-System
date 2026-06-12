@@ -2735,7 +2735,35 @@ function renderDepreciation(records) {
 }
 
 function filterDepreciation() {
-    loadDepreciation();
+    const search = (document.getElementById('depr-search')?.value || '').toLowerCase().trim();
+    if (!search) {
+        loadDepreciation();
+        return;
+    }
+    const filtered = (allDepreciation || []).filter(r => {
+        const name = (r.assetName || r.assetId?.name || '').toLowerCase();
+        const code = (r.assetCode || r.assetId?.assetId || '').toLowerCase();
+        return name.includes(search) || code.includes(search);
+    });
+    renderDepreciation(filtered);
+}
+
+async function truncateAllDepreciation() {
+    if (!confirm('This will permanently delete ALL depreciation records. This cannot be undone. Continue?')) return;
+    if (!confirm('Are you absolutely sure? All depreciation history will be lost.')) return;
+    try {
+        const res = await fetch(`${BASE_URL}/api/depreciation/truncate`, { method: 'DELETE', headers: authHdrs() });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || 'All records deleted.');
+            loadDepreciation();
+            loadDepreciationSummary();
+        } else {
+            alert(data.message || 'Failed to truncate.');
+        }
+    } catch (e) {
+        alert('Connection error.');
+    }
 }
 
 async function bulkCalculate() {
