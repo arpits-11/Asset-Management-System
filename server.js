@@ -1284,6 +1284,10 @@ app.get('/api/reports/summary', authMiddleware, requireRole('admin', 'manager'),
         const deprTotal = await Depreciation.aggregate([
             { $group: { _id: null, total: { $sum: '$depreciationAmount' } } }
         ]);
+        const maintCosts = await Maintenance.aggregate([
+            { $match: { status: 'completed' } },
+            { $group: { _id: null, total: { $sum: '$cost' } } }
+        ]);
 
         res.json({
             byStatus, byCategory, byCondition,
