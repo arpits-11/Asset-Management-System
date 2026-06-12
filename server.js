@@ -1281,16 +1281,15 @@ app.get('/api/reports/summary', authMiddleware, requireRole('admin', 'manager'),
         const totalValue = await Asset.aggregate([
             { $group: { _id: null, purchase: { $sum: '$purchasePrice' }, current: { $sum: '$currentValue' } } }
         ]);
-        const maintCosts = await Maintenance.aggregate([
-            { $match: { status: 'completed' } },
-            { $group: { _id: null, total: { $sum: '$cost' } } }
+        const deprTotal = await Depreciation.aggregate([
+            { $group: { _id: null, total: { $sum: '$depreciationAmount' } } }
         ]);
 
         res.json({
             byStatus, byCategory, byCondition,
             totalPurchaseValue: totalValue[0]?.purchase || 0,
             totalCurrentValue: totalValue[0]?.current || 0,
-            totalDepreciation: (totalValue[0]?.purchase || 0) - (totalValue[0]?.current || 0),
+            totalDepreciation: deprTotal[0]?.total || 0,
             totalMaintenanceCost: maintCosts[0]?.total || 0
         });
     } catch (err) {
@@ -1819,16 +1818,18 @@ app.get('/api/depreciation/summary', authMiddleware, async (req, res) => {
             { $sort: { _id: 1 } }
         ]);
 
-        const assetValues = await Asset.aggregate([
-            { $group: { _id: null, purchase: { $sum: '$purchasePrice' }, current: { $sum: '$currentValue' } } }
+        const retentionData = await Depreciation.aggregate([
+            { $sort: { year: -1, createdAt: -1 } },
+            { $group: { _id: '$assetId', openingValue: { $first: '$openingValue' }, closingValue: { $first: '$closingValue' } } },
+            { $group: { _id: null, totalOpening: { $sum: '$openingValue' }, totalClosing: { $sum: '$closingValue' } } }
         ]);
 
         res.json({
             totalDepreciation: totalDepr[0]?.total || 0,
             totalRecords: totalDepr[0]?.count || 0,
             byYear,
-            totalPurchaseValue: assetValues[0]?.purchase || 0,
-            totalCurrentValue: assetValues[0]?.current || 0
+            totalPurchaseValue: retentionData[0]?.totalOpening || 0,
+            totalCurrentValue: retentionData[0]?.totalClosing || 0
         });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
