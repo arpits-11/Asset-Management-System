@@ -1705,7 +1705,7 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
         if (!method || !year)
             return res.status(400).json({ message: 'Method and year are required' });
 
-        const assets = await Asset.find({ status: { $in: ['active', 'in-repair'] } });
+        const assets = await Asset.find({ status: { $in: ['active', 'in-repair', 'assigned'] } });
         const user = await User.findById(req.userId);
         const deviceTypes = await DeviceType.find({});
         const dtByShort = {};
@@ -1725,10 +1725,10 @@ app.post('/api/depreciation/bulk', authMiddleware, requireRole('admin'), async (
             if (openingValue <= 0) { skipped++; continue; }
 
             const assetName = (asset.name || '').trim();
-            const dtMatch = dtByShort[assetName.toUpperCase()] || dtByFull[assetName.toLowerCase()];
-            const effectiveRate = (dtMatch && dtMatch.depreciationRate != null)
+            const dtMatch = dtByFull[assetName.toLowerCase()] || dtByShort[assetName.toUpperCase()];
+            const effectiveRate = (dtMatch && dtMatch.depreciationRate != null && dtMatch.depreciationRate > 0)
                 ? dtMatch.depreciationRate
-                : parseFloat(rate);
+                : parseFloat(rate) || 0;
 
             if (!effectiveRate || effectiveRate <= 0) { skipped++; continue; }
 
