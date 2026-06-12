@@ -1839,10 +1839,12 @@ app.get('/api/depreciation/summary', authMiddleware, async (req, res) => {
 app.delete('/api/depreciation/truncate', authMiddleware, requireRole('admin'), async (req, res) => {
     try {
         const result = await Depreciation.deleteMany({});
-        const user = await User.findById(req.userId);
-        await logActivity(req.userId, user?.name || 'Admin', 'truncate_depreciation',
-            `Truncated all depreciation records (${result.deletedCount} deleted)`);
         res.json({ message: `All ${result.deletedCount} depreciation records deleted.` });
+        try {
+            const user = await User.findById(req.userId);
+            await logActivity(req.userId, user?.name || 'Admin', 'truncate_depreciation',
+                `Truncated all depreciation records (${result.deletedCount} deleted)`);
+        } catch (logErr) { console.error('Log error:', logErr); }
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }
